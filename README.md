@@ -20,6 +20,7 @@ The screenshot uses **synthetic demonstration data**, not a real account or a pe
 - Process detail with CPU, resident memory, PID, path, thread count and detected GPU clients.
 - Confirmed termination (SIGTERM) or forced termination (SIGKILL) for your own processes, with PID identity validation.
 - Native menu bar icon: left click for the panel, right click for actions, and dashboard reopening after closing its window.
+- Selectable menu bar values beside the icon: CPU, RAM, GPU and Claude/OpenAI quota windows, with used or remaining percentages.
 - Hardware fit estimator with public Hugging Face metadata, local GGUF/config metadata, configurable context, KV cache precision and memory margins.
 - Credits page linking the author, source repository, issue tracker and license.
 - Full dashboard, Finder shortcuts and launch at login.
@@ -27,6 +28,16 @@ The screenshot uses **synthetic demonstration data**, not a real account or a pe
 [Light appearance](docs/dashboard-light.png) · [Process detail](docs/processes.png) · [Hardware fit estimator](docs/model-fit.png) · [Credits](docs/credits.png). All previews use synthetic data.
 
 The project name and icon are provisional while the feature set is being developed.
+
+## Menu bar values
+
+Open **Impostazioni → Barra dei menu** to select any combination of CPU, RAM, GPU, Claude Code and OpenAI/Codex. CPU and RAM are enabled by default. Disable every value to keep only the icon. Preferences are saved and applied without restarting; the icon retains its left/right-click actions.
+
+RAM can show percentage or used memory. Each provider has its own quota-window selector, including any additional Codex buckets reported by the service. Choose used or remaining percentages for both providers. For example, `CL5h 23%` is the selected Claude five-hour quota and `OA7g 58%` is the selected OpenAI/Codex seven-day quota. The tooltip names the window, percentage meaning and reset time.
+
+Unavailable/expired values display `—`, never a guessed zero. An asterisk marks last-known quotas older than ten minutes or a failed refresh. An explicitly selected window that disappears stays unavailable rather than switching silently to another quota. Automatic selection prefers Claude's five-hour quota and Codex's main primary quota. The values share the dashboard's refresh intervals and do not trigger additional service requests.
+
+[Menu bar settings preview](docs/settings-light.png), using synthetic demonstration data.
 
 ## Build and run
 
@@ -142,7 +153,7 @@ swift run ModelDeck --demo
 .build/debug/ModelDeck --check-fit Qwen/Qwen2.5-3B-Instruct-GGUF
 ```
 
-Tests cover API formats, unavailable versus zero values, multi-bucket quotas, sanitized quota persistence, HF cache symlinks/revisions, Unsloth settings read-only behavior, endpoint restrictions, reversible Claude status line installation, CPU delta units and process termination identity checks. Calculator tests cover KV scaling/precision, budgets, unsupported architectures, incomplete shard sets and bounded GGUF parsing. Tests use fixtures without external services. The process termination test creates and stops only its own disposable child process. `--check-menu` exercises native panel opening/closing, template icon configuration and dashboard reopening. `--check-fit` is an optional live public-metadata check.
+Tests cover API formats, unavailable versus zero values, multi-bucket quotas, sanitized quota persistence, HF cache symlinks/revisions, Unsloth settings read-only behavior, endpoint restrictions, reversible Claude status line installation, CPU delta units and process termination identity checks. Calculator tests cover KV scaling/precision, budgets, unsupported architectures, incomplete shard sets and bounded GGUF parsing. Menu bar tests cover selection, quota windows, remaining percentages, stale/expired values and missing samples. Tests use fixtures without external services. The process termination test creates and stops only its own disposable child process. `--check-menu` exercises native panel opening/closing, template icon configuration, dashboard reopening, image-plus-text mode, live value changes and icon-only mode. `--check-fit` is an optional live public-metadata check.
 
 ## Credits
 

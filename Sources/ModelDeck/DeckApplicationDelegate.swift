@@ -9,7 +9,8 @@ import ModelDeckCore
     private(set) var popover = NSPopover()
     private var dashboard: NSWindow?
     private var settings: NSWindow?
-    private var subscription: AnyCancellable?
+    private var subscriptions = Set<AnyCancellable>()
+    private var menuOptionsOverride: MenuBarOptions?
 
     init(store: DeckStore) { self.store = store }
 
@@ -43,10 +44,11 @@ import ModelDeckCore
 
     func configureStatusItem() {
         guard statusItem == nil else { return }
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         let image = NSImage(systemSymbolName: "square.stack.3d.up", accessibilityDescription: "ModelDeck")
         image?.isTemplate = true; image?.size = NSSize(width: 17, height: 18)
         item.button?.image = image; item.button?.toolTip = "ModelDeck"
+        item.button?.font = .monospacedDigitSystemFont(ofSize: 11, weight: .medium)
         item.button?.target = self; item.button?.action = #selector(togglePopover)
         item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
         statusItem = item
@@ -56,9 +58,22 @@ import ModelDeckCore
                               openProcesses: { [weak self] in self?.showDashboard(section: "processes") },
                               openSettings: { [weak self] in self?.showSettings() })
         popover.contentViewController = NSHostingController(rootView: panel.environmentObject(store).environment(\.locale, Locale(identifier: "it_IT")))
-        subscription = store.$snapshot.sink { [weak self] snapshot in
-            self?.statusItem?.button?.toolTip = "ModelDeck · CPU \(DeckFormat.percent(snapshot.cpu)) · RAM \(DeckFormat.percent(snapshot.memoryPercent))"
-        }
+        store.$snapshot.combineLatest(store.$claude, store.$codex).sink { [weak self] values in
+            self?.updateStatusItem(snapshot: values.0, claude: values.1, openAI: values.2)
+        }.store(in: &subscriptions)
+        NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
+            .receive(on: RunLoop.main).sink { [weak self] _ in self?.refreshStatusItem() }.store(in: &subscriptions)
+    }
+
+    private func refreshStatusItem() { updateStatusItem(snapshot: store.snapshot, claude: store.claude, openAI: store.codex) }
+    private func updateStatusItem(snapshot: SystemSnapshot, claude: SubscriptionUsage, openAI: SubscriptionUsage) {
+        guard let item = statusItem, let button = item.button else { return }
+        let summary = MenuBarSummary.render(options: menuOptionsOverride ?? .load(), snapshot: snapshot, claude: claude, openAI: openAI)
+        item.length = summary.title.isEmpty ? NSStatusItem.squareLength : NSStatusItem.variableLength
+        button.imagePosition = summary.title.isEmpty ? .imageOnly : .imageLeading
+        button.title = summary.title.isEmpty ? "" : " " + summary.title
+        button.toolTip = summary.tooltip
+        button.setAccessibilityLabel(summary.tooltip.replacingOccurrences(of: "\n", with: ", "))
     }
 
     @objc func togglePopover() {
@@ -103,14 +118,28 @@ import ModelDeckCore
         settings?.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
     }
     func checkMenuLifecycle() -> [String: Bool] {
+        let savedSnapshot = store.snapshot
+        let savedOverride = menuOptionsOverride
+        defer { menuOptionsOverride = savedOverride; store.snapshot = savedSnapshot; refreshStatusItem() }
+        var options = MenuBarOptions(); options.metrics = Set(MenuBarMetric.allCases)
+        menuOptionsOverride = options; refreshStatusItem()
+        let text = statusItem?.button?.title ?? ""
+        let showsValues = text.contains("CPU 33%") && text.contains("RAM") && text.contains("CL5h 23%") && text.contains("OA5h 34%")
+        let imageAndText = statusItem?.button?.imagePosition == .imageLeading && statusItem?.length == NSStatusItem.variableLength
+        store.snapshot.cpu = 41
+        let updatesValues = statusItem?.button?.title.contains("CPU 41%") == true
         togglePopover()
         let opened = popover.isShown
         togglePopover()
         let closed = !popover.isShown
         dashboard?.close()
         showDashboard()
+        options.metrics = []; menuOptionsOverride = options; refreshStatusItem()
+        let iconOnly = statusItem?.button?.title.isEmpty == true && statusItem?.length == NSStatusItem.squareLength
         return ["template_icon": statusItem?.button?.image?.isTemplate == true,
                 "button_target": statusItem?.button?.target === self,
+                "selected_values": showsValues, "image_and_text": imageAndText,
+                "live_values": updatesValues, "icon_only": iconOnly,
                 "popover_opened": opened, "popover_closed": closed,
                 "dashboard_reopened": dashboard?.isVisible == true]
     }

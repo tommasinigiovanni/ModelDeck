@@ -29,6 +29,7 @@ struct SettingsView: View {
                     }.pickerStyle(.segmented).frame(width: 280, height: 26)
                 }
             }
+            MenuBarSettingsView()
             DeckCard {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Server locali").font(.system(size: 15, weight: .semibold))

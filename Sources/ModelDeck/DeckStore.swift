@@ -98,8 +98,8 @@ import Security
             RunningProcess(id: .init(pid: 103, startedSeconds: 1, startedMicroseconds: 0), name: "Browser", path: "/Applications/Browser.app", userID: 501, cpu: 16, memory: 2_600_000_000, gpu: nil, gpuClient: true, threads: 18)
         ]
         inventory.runtimes = [.init(name: "Ollama", online: true, detail: "2 modelli · API locale"), .init(name: "LM Studio", online: true, detail: "2 modelli · API locale")]
-        codex = .init(provider: "OpenAI", plan: "Pro", windows: [.init(id: "h", title: "5 ore", usedPercent: 34, resetsAt: Date().addingTimeInterval(9500)), .init(id: "w", title: "7 giorni", usedPercent: 58, resetsAt: Date().addingTimeInterval(240000))], updatedAt: Date(), source: "Codex · app server")
-        claude = .init(provider: "Claude", windows: [.init(id: "h", title: "5 ore", usedPercent: 23, resetsAt: Date().addingTimeInterval(7200)), .init(id: "w", title: "7 giorni", usedPercent: 41, resetsAt: Date().addingTimeInterval(180000))], updatedAt: Date(), source: "Claude Code · status line")
+        codex = .init(provider: "OpenAI", plan: "Pro", windows: [.init(id: "codex-primary", title: "5 ore", usedPercent: 34, resetsAt: Date().addingTimeInterval(9500), durationMinutes: 300), .init(id: "codex-secondary", title: "7 giorni", usedPercent: 58, resetsAt: Date().addingTimeInterval(240000), durationMinutes: 10080)], updatedAt: Date(), source: "Codex · app server")
+        claude = .init(provider: "Claude", windows: [.init(id: "five_hour", title: "5 ore", usedPercent: 23, resetsAt: Date().addingTimeInterval(7200), durationMinutes: 300), .init(id: "seven_day", title: "7 giorni", usedPercent: 41, resetsAt: Date().addingTimeInterval(180000), durationMinutes: 10080)], updatedAt: Date(), source: "Claude Code · status line")
     }
 }
 

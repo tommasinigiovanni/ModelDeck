@@ -66,7 +66,7 @@ public enum CodexUsage {
                 guard buffer.count < 2_000_000 else { throw DeckError.invalidResponse }
             }
         }
-        try send(["id": 0, "method": "initialize", "params": ["clientInfo": ["name": "modeldeck", "title": "ModelDeck", "version": "0.3.0"]]])
+        try send(["id": 0, "method": "initialize", "params": ["clientInfo": ["name": "modeldeck", "title": "ModelDeck", "version": "0.4.0"]]])
         _ = try response(0)
         try send(["method": "initialized", "params": [:]])
         try send(["id": 1, "method": "account/rateLimits/read", "params": [:]])
@@ -90,7 +90,7 @@ public enum CodexUsage {
                 } else { duration = field == "primary" ? "Sessione" : "Periodo esteso" }
                 let name = bucket["limitName"] as? String ?? key
                 windows.append(UsageWindow(id: "\(key)-\(field)", title: buckets.count > 1 ? "\(name) · \(duration)" : duration,
-                                           usedPercent: percent, resetsAt: (window["resetsAt"] as? Double).map(Date.init(timeIntervalSince1970:))))
+                                           usedPercent: percent, resetsAt: (window["resetsAt"] as? Double).map(Date.init(timeIntervalSince1970:)), durationMinutes: minutes))
             }
         }
         return SubscriptionUsage(provider: "OpenAI", plan: plan, windows: windows, updatedAt: now,
@@ -110,10 +110,10 @@ public enum ClaudeUsage {
         guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw DeckError.invalidResponse }
         let limits = root["rate_limits"] as? [String: Any] ?? [:]
         var windows: [UsageWindow] = []
-        for (key, title) in [("five_hour", "5 ore"), ("seven_day", "7 giorni"), ("spend_limit", "Limite di spesa")] {
+        for (key, title, duration) in [("five_hour", "5 ore", 300), ("seven_day", "7 giorni", 10080), ("spend_limit", "Limite di spesa", 0)] {
             guard let item = limits[key] as? [String: Any], let percent = item["used_percentage"] as? Double, percent.isFinite, percent >= 0 else { continue }
             let reset = (item["resets_at"] as? Double).map(Date.init(timeIntervalSince1970:))
-            windows.append(UsageWindow(id: key, title: title, usedPercent: percent, resetsAt: reset))
+            windows.append(UsageWindow(id: key, title: title, usedPercent: percent, resetsAt: reset, durationMinutes: duration > 0 ? duration : nil))
         }
         return SubscriptionUsage(provider: "Claude", windows: windows,
                                  updatedAt: (root["updated_at"] as? Double).map(Date.init(timeIntervalSince1970:)),

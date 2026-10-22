@@ -77,9 +77,10 @@ public struct UsageWindow: Identifiable, Sendable {
     public var title: String
     public var usedPercent: Double
     public var resetsAt: Date?
+    public var durationMinutes: Int?
     public var isExpired: Bool { resetsAt.map { $0 <= Date() } ?? false }
-    public init(id: String, title: String, usedPercent: Double, resetsAt: Date?) {
-        self.id = id; self.title = title; self.usedPercent = usedPercent; self.resetsAt = resetsAt
+    public init(id: String, title: String, usedPercent: Double, resetsAt: Date?, durationMinutes: Int? = nil) {
+        self.id = id; self.title = title; self.usedPercent = usedPercent; self.resetsAt = resetsAt; self.durationMinutes = durationMinutes
     }
 }
 
