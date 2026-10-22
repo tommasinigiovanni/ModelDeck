@@ -14,40 +14,44 @@ final class MenuBarTests: XCTestCase {
     }
     func testZeroQuotaIsValidAndMissingOrExpiredWindowsNeverBecomeZero() {
         var options = MenuBarOptions(); options.metrics = [.claude, .openAI]
+        options.claudeWindowID = "five_hour"
         let valid = render(options)
-        XCTAssertEqual(valid.title, "CL5h 0%   OA —")
+        XCTAssertEqual(valid.title, "Claude 5h 0% usato   OpenAI —")
         var expired = usage(); expired.windows[0].resetsAt = now.addingTimeInterval(-1)
-        XCTAssertTrue(render(options, claude: expired).title.hasPrefix("CL5h —"))
+        XCTAssertTrue(render(options, claude: expired).title.hasPrefix("Claude 5h —"))
         options.claudeWindowID = "removed-window"
-        XCTAssertTrue(render(options).title.hasPrefix("CL —"))
+        XCTAssertTrue(render(options).title.hasPrefix("Claude —"))
         XCTAssertFalse(render(options).title.contains("74%"))
     }
     func testSelectedWeeklyRemainingQuotaAndOverage() {
         var options = MenuBarOptions(); options.metrics = [.claude]; options.quotaStyle = .remaining; options.claudeWindowID = "seven_day"
-        XCTAssertEqual(render(options).title, "CL7g 26%")
+        XCTAssertEqual(render(options).title, "Claude 7g 26% rimanente")
         XCTAssertTrue(render(options).tooltip.contains("26% rimanente"))
         var overage = usage(); overage.windows[1].usedPercent = 120
-        XCTAssertEqual(render(options, claude: overage).title, "CL7g 0%")
+        XCTAssertEqual(render(options, claude: overage).title, "Claude 7g 0% rimanente")
     }
     func testStaleValuesAndRefreshErrorsAreMarkedAndInvalidNumbersAreUnavailable() {
         var options = MenuBarOptions(); options.metrics = [.claude]
+        options.claudeWindowID = "five_hour"
         var stale = usage(); stale.updatedAt = now.addingTimeInterval(-601)
-        XCTAssertEqual(render(options, claude: stale).title, "CL5h 0%*")
+        XCTAssertEqual(render(options, claude: stale).title, "Claude 5h 0%* usato")
         XCTAssertTrue(render(options, claude: stale).tooltip.contains("da aggiornare"))
         var failed = usage(); failed.message = "Connection failed"
-        XCTAssertEqual(render(options, claude: failed).title, "CL5h 0%*")
+        XCTAssertEqual(render(options, claude: failed).title, "Claude 5h 0%* usato")
         failed.windows[0].usedPercent = .nan
-        XCTAssertEqual(render(options, claude: failed).title, "CL5h —")
+        XCTAssertEqual(render(options, claude: failed).title, "Claude 5h —")
     }
     func testCodexDefaultPrefersMainBucketAndExplicitSelectionIsRespected() throws {
         let data = Data(#"{"rateLimitsByLimitId":{"a-review":{"primary":{"usedPercent":91,"windowDurationMins":60}},"codex":{"primary":{"usedPercent":12,"windowDurationMins":300},"secondary":{"usedPercent":55,"windowDurationMins":10080}}}}"#.utf8)
         let codex = try CodexUsage.parse(data, now: now)
         var options = MenuBarOptions(); options.metrics = [.openAI]
-        XCTAssertEqual(render(options, codex: codex).title, "OA5h 12%")
+        XCTAssertEqual(render(options, codex: codex).title, "OpenAI 7g 55% usato")
+        options.openAIWindowID = "codex-primary"
+        XCTAssertEqual(render(options, codex: codex).title, "OpenAI 5h 12% usato")
         options.openAIWindowID = "codex-secondary"
-        XCTAssertEqual(render(options, codex: codex).title, "OA7g 55%")
+        XCTAssertEqual(render(options, codex: codex).title, "OpenAI 7g 55% usato")
         options.openAIWindowID = "a-review-primary"
-        XCTAssertEqual(render(options, codex: codex).title, "OA1h 91%")
+        XCTAssertEqual(render(options, codex: codex).title, "OpenAI 1h 91% usato")
         XCTAssertTrue(render(options, codex: codex).tooltip.contains("a-review"))
     }
     func testMetricSelectionMemoryUnitsAndUnavailableSamples() {
@@ -59,5 +63,15 @@ final class MenuBarTests: XCTestCase {
         XCTAssertEqual(render(options, snapshot: snapshot).title, "RAM " + DeckFormat.bytes(snapshot.memoryUsed))
         options.metrics = []
         XCTAssertEqual(render(options).title, "")
+    }
+    func testAutomaticQuotaDoesNotHideAnExhaustedWeekBehindAnUnusedSession() {
+        var claude = usage(); claude.windows[1].usedPercent = 100
+        let codex = SubscriptionUsage(provider: "OpenAI", windows: [.init(id: "codex-secondary", title: "7 giorni", usedPercent: 0, resetsAt: now.addingTimeInterval(1000), durationMinutes: 10080)], updatedAt: now, source: "Fixture")
+        var options = MenuBarOptions(); options.metrics = [.claude, .openAI]; options.quotaStyle = .remaining
+        XCTAssertEqual(render(options, claude: claude, codex: codex).title, "Claude 7g 0% rimanente   OpenAI 7g 100% rimanente")
+        claude.windows[1].resetsAt = now.addingTimeInterval(-1)
+        XCTAssertEqual(render(options, claude: claude, codex: codex).title, "Claude 7g —   OpenAI 7g 100% rimanente")
+        claude.windows[0].usedPercent = 100
+        XCTAssertEqual(render(options, claude: claude, codex: codex).title, "Claude 5h 0% rimanente   OpenAI 7g 100% rimanente")
     }
 }

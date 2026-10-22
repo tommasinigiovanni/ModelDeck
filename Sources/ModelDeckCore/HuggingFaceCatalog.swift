@@ -59,7 +59,7 @@ public enum HuggingFaceCatalog {
         return model
     }
 
-    private static func metadata(_ url: URL, limit: Int = 8_388_608) async throws -> Data {
+    static func metadata(_ url: URL, limit: Int = 8_388_608) async throws -> Data {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.httpCookieStorage = nil; configuration.urlCredentialStorage = nil
         configuration.timeoutIntervalForRequest = 10; configuration.timeoutIntervalForResource = 20
@@ -70,6 +70,7 @@ public enum HuggingFaceCatalog {
         let (stream, response) = try await session.bytes(for: request)
         guard let response = response as? HTTPURLResponse else { throw DeckError.invalidResponse }
         guard response.statusCode == 200 else {
+            if response.statusCode == 429 { throw DeckError.rpc("Hugging Face sta limitando le richieste. Attendi e riprova.") }
             if [401, 403].contains(response.statusCode) { throw DeckError.rpc("Repository privato o con accesso riservato. Puoi inserire i dati manualmente.") }
             if response.statusCode == 404 { throw DeckError.rpc("Repository o metadati non trovati su Hugging Face.") }
             throw DeckError.http(response.statusCode)

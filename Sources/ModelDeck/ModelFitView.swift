@@ -11,8 +11,8 @@ struct ModelFitView: View {
     @Environment(\.dismiss) private var dismiss
     var localModel: LocalModel? = nil
     var demonstration = false
+    var demonstrateSearch = false
     var appearanceOverride: DeckAppearance? = nil
-    @State private var repository = ""
     @State private var hub: HubModel?
     @State private var variantID = ""
     @State private var profile = AttentionProfile()
@@ -75,10 +75,8 @@ struct ModelFitView: View {
                     DeckCard {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Metadati da Hugging Face").font(.system(size: 14, weight: .semibold))
-                            HStack {
-                                TextField("autore/modello o https://huggingface.co/autore/modello", text: $repository).textFieldStyle(.roundedBorder).onSubmit { lookup() }
-                                Button(loading ? "Caricamento…" : "Importa dati", action: lookup).disabled(loading || repository.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                            }
+                            HubSearchView(initialQuery: localModel?.name ?? "", importing: loading, demonstration: demonstrateSearch, onSelect: lookup)
+                            if let hub { Text("Modello selezionato · " + hub.repository).font(.system(size: 11, weight: .medium)).textSelection(.enabled) }
                             if let hub, !hub.variants.isEmpty {
                                 Picker("Pesi / quantizzazione", selection: $variantID) {
                                     ForEach(hub.variants) { variant in Text(variant.name + " · " + DeckFormat.bytes(variant.bytes)).tag(variant.id) }
@@ -168,7 +166,6 @@ struct ModelFitView: View {
                     profile = await Task.detached(priority: .utility) { LocalFitMetadata.read(model) }.value
                     if !profile.complete, model.source == .ollama,
                        let details = try? await LocalFitMetadata.ollama(model: model.name, endpoint: UserDefaults.standard.string(forKey: "ollamaURL") ?? "http://127.0.0.1:11434") { profile = details }
-                    if let id = try? HuggingFaceCatalog.repositoryID(model.name) { repository = id }
                 }
                 if demonstration {
                     weightsGiB = 4; profile.layers = 32; profile.kvHeads = 8; profile.keyDimension = 128; profile.valueDimension = 128
@@ -197,7 +194,7 @@ struct ModelFitView: View {
     private func integer(_ label: String, value: Binding<Int>) -> some View {
         VStack(alignment: .leading, spacing: 6) { Text(label).font(.system(size: 10)).foregroundStyle(DeckTheme.muted); TextField(label, value: value, format: .number.grouping(.never)).textFieldStyle(.roundedBorder).labelsHidden() }.frame(maxWidth: .infinity)
     }
-    private func lookup() {
+    private func lookup(_ repository: String) {
         guard !loading else { return }; loading = true; error = nil
         request?.cancel()
         request = Task {

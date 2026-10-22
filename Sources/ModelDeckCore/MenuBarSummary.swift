@@ -22,7 +22,7 @@ public struct MenuBarOptions: Codable, Equatable, Sendable {
     public var metrics: Set<MenuBarMetric> = [.cpu, .memory]
     public var memoryStyle: MenuBarMemoryStyle = .percent
     public var quotaStyle: MenuBarQuotaStyle = .used
-    /// Empty selects the provider's main quota. Explicit IDs never fall back to a different window.
+    /// Empty selects the most restrictive active quota in the provider's main bucket.
     public var claudeWindowID = ""
     public var openAIWindowID = ""
     public init() {}
@@ -38,10 +38,27 @@ public struct MenuBarSummary: Sendable {
     public let title: String
     public let tooltip: String
 
-    public static func selectedWindow(in usage: SubscriptionUsage, id: String, provider: MenuBarMetric) -> UsageWindow? {
+    public static func selectedWindow(in usage: SubscriptionUsage, id: String, provider: MenuBarMetric, now: Date = Date()) -> UsageWindow? {
         if !id.isEmpty { return usage.windows.first { $0.id == id } }
-        let main = provider == .claude ? "five_hour" : "codex-primary"
-        return usage.windows.first { $0.id == main } ?? usage.windows.first { $0.id.hasSuffix("-primary") } ?? usage.windows.first
+        var candidates = usage.windows
+        if provider == .openAI {
+            let main = usage.windows.first { $0.id == "codex-primary" || $0.id == "codex-secondary" }
+                ?? usage.windows.first { $0.id.hasSuffix("-primary") }
+            if let main, let suffix = ["-primary", "-secondary"].first(where: { main.id.hasSuffix($0) }) {
+                let bucket = String(main.id.dropLast(suffix.count))
+                candidates = usage.windows.filter { $0.id == bucket + "-primary" || $0.id == bucket + "-secondary" }
+            }
+        }
+        func valid(_ window: UsageWindow) -> Bool { window.usedPercent.isFinite && window.usedPercent >= 0 && (window.resetsAt.map { $0 > now } ?? true) }
+        let active = candidates.filter(valid).sorted {
+            if $0.usedPercent != $1.usedPercent { return $0.usedPercent > $1.usedPercent }
+            return ($0.durationMinutes ?? Int.max) < ($1.durationMinutes ?? Int.max)
+        }
+        // A known exhausted window blocks usage even if another window needs refreshing.
+        if let restrictive = active.first, restrictive.usedPercent >= 100 { return restrictive }
+        // Otherwise, an expired/invalid window makes the effective remaining quota unknown.
+        if let unknown = candidates.first(where: { !valid($0) }) { return unknown }
+        return active.first ?? candidates.first
     }
 
     public static func render(options: MenuBarOptions, snapshot: SystemSnapshot, claude: SubscriptionUsage, openAI: SubscriptionUsage, now: Date = Date()) -> MenuBarSummary {
@@ -64,13 +81,13 @@ public struct MenuBarSummary: Sendable {
             case .claude, .openAI:
                 let usage = metric == .claude ? claude : openAI
                 let id = metric == .claude ? options.claudeWindowID : options.openAIWindowID
-                let window = selectedWindow(in: usage, id: id, provider: metric)
-                let prefix = metric == .claude ? "CL" : "OA"
+                let window = selectedWindow(in: usage, id: id, provider: metric, now: now)
+                let prefix = metric == .claude ? "Claude" : "OpenAI"
                 var scope = ""
                 if let minutes = window?.durationMinutes, minutes > 0 {
                     scope = minutes % 1440 == 0 ? "\(minutes / 1440)g" : minutes % 60 == 0 ? "\(minutes / 60)h" : "\(minutes)m"
                 }
-                let label = prefix + scope
+                let label = prefix + (scope.isEmpty ? "" : " " + scope)
                 guard let window, window.usedPercent.isFinite, window.usedPercent >= 0,
                       window.resetsAt.map({ $0 > now }) ?? true else {
                     titles.append(label + " —")
@@ -80,7 +97,7 @@ public struct MenuBarSummary: Sendable {
                 let stale = usage.updatedAt.map { now.timeIntervalSince($0) > 600 } ?? true
                 let needsUpdate = stale || usage.message != nil
                 let value = options.quotaStyle == .used ? window.usedPercent : max(0, 100 - window.usedPercent)
-                titles.append(label + " " + percentage(value) + (needsUpdate ? "*" : ""))
+                titles.append(label + " " + percentage(value) + (needsUpdate ? "*" : "") + (options.quotaStyle == .used ? " usato" : " rimanente"))
                 var detail = metric.title + " · " + window.title + " · " + percentage(value) + (options.quotaStyle == .used ? " utilizzato" : " rimanente")
                 if needsUpdate { detail += " · ultimo dato, da aggiornare" }
                 if let reset = window.resetsAt { detail += " · reset " + reset.formatted(date: .abbreviated, time: .shortened) }

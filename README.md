@@ -22,6 +22,7 @@ The screenshot uses **synthetic demonstration data**, not a real account or a pe
 - Native menu bar icon: left click for the panel, right click for actions, and dashboard reopening after closing its window.
 - Selectable menu bar values beside the icon: CPU, RAM, GPU and Claude/OpenAI quota windows, with used or remaining percentages.
 - Hardware fit estimator with public Hugging Face metadata, local GGUF/config metadata, configurable context, KV cache precision and memory margins.
+- Public Hugging Face model search by partial name, with selectable results and GGUF/MLX filters.
 - Credits page linking the author, source repository, issue tracker and license.
 - Full dashboard, Finder shortcuts and launch at login.
 
@@ -33,9 +34,9 @@ The project name and icon are provisional while the feature set is being develop
 
 Open **Impostazioni → Barra dei menu** to select any combination of CPU, RAM, GPU, Claude Code and OpenAI/Codex. CPU and RAM are enabled by default. Disable every value to keep only the icon. Preferences are saved and applied without restarting; the icon retains its left/right-click actions.
 
-RAM can show percentage or used memory. Each provider has its own quota-window selector, including any additional Codex buckets reported by the service. Choose used or remaining percentages for both providers. For example, `CL5h 23%` is the selected Claude five-hour quota and `OA7g 58%` is the selected OpenAI/Codex seven-day quota. The tooltip names the window, percentage meaning and reset time.
+RAM can show percentage or used memory. Each provider has its own quota-window selector, including any additional Codex buckets reported by the service. Choose used or remaining percentages for both providers. Full provider names and percentage meaning appear directly in the bar, for example `Claude 7g 0% rimanente` and `OpenAI 7g 100% rimanente`. The tooltip names the window and reset time.
 
-Unavailable/expired values display `—`, never a guessed zero. An asterisk marks last-known quotas older than ten minutes or a failed refresh. An explicitly selected window that disappears stays unavailable rather than switching silently to another quota. Automatic selection prefers Claude's five-hour quota and Codex's main primary quota. The values share the dashboard's refresh intervals and do not trigger additional service requests.
+Unavailable/expired values display `—`, never a guessed zero. An asterisk marks last-known quotas older than ten minutes or a failed refresh. An explicitly selected window that disappears stays unavailable rather than switching silently to another quota. Automatic selection uses the **most restrictive active reported quota**, comparing Claude's returned limits and Codex's main bucket windows. Separate Codex buckets such as review limits remain selectable explicitly. An exhausted weekly limit therefore shows 0% remaining even if the five-hour window is unused. If a main window has expired, the effective quota stays unavailable until refreshed, unless another valid window already proves that usage is blocked. The values share the dashboard's refresh intervals and do not trigger additional service requests. Clicking the icon opens/closes the panel; it does not hide the selected bar values.
 
 [Menu bar settings preview](docs/settings-light.png), using synthetic demonstration data.
 
@@ -110,7 +111,9 @@ Only quota percentages, reset timestamps and capture time are written to `claude
 
 In **Modelli locali**, choose **Verifica hardware** to check any model, or the gauge icon on a model row to prefill its local weight size and attention metadata.
 
-Paste a public Hugging Face repository ID or repository URL and choose **Importa dati**. The app reads the [Hub API](https://huggingface.co/docs/hub/api) file sizes and `config.json`, using the repository revision when available, or the declared base model's config as a fallback. Quantizations appear as alternatives; complete GGUF shard sets are summed. No weights, tokens or inference are requested, and no Mac hardware details are sent to Hugging Face. Restricted/private repositories require manual data. Requests have time and response-size limits.
+Type a partial model name such as `qwen` or `llama` and choose **Cerca**, optionally filtering for GGUF or MLX. Up to 20 public results are shown by download count, with repository, format and available metadata. Select a result to import its metadata. Search uses fragments of model IDs; it does not guarantee spelling correction. An exact public repository ID or repository URL can be loaded directly with **Importa ID/link**. [Search preview](docs/model-search.png) uses synthetic data.
+
+The app reads the [Hub API](https://huggingface.co/docs/hub/api) file sizes and `config.json`, using the repository revision when available, or the declared base model's config as a fallback. Quantizations appear as alternatives; complete GGUF shard sets are summed. No weights, tokens or inference are requested, and no Mac hardware details are sent to Hugging Face. Public search terms and selected repository IDs are sent to Hugging Face only on search/import actions. Editing a query cancels an in-flight search and discards old results. Restricted/private repositories require manual data. Requests have time and response-size limits.
 
 The estimate is **weights + KV cache + runtime margin**. KV memory uses layer count, KV heads (including GQA), key/value dimensions, context length, simultaneous sequences and cache precision, following the [standard KV formula](https://huggingface.co/blog/kv-cache-quantization). Context means the total token capacity, including prompt and generated text. Cache quantization must be supported by the selected runtime. The runtime margin is a configurable extra plus 15% of weight size, with a minimum of 1 GiB.
 
@@ -149,11 +152,13 @@ swift run ModelDeck --demo
 .build/debug/ModelDeck --preview docs/processes.png --processes
 .build/debug/ModelDeck --preview docs/model-fit.png --fit
 .build/debug/ModelDeck --preview docs/credits.png --credits
+.build/debug/ModelDeck --preview docs/model-search.png --fit --search
 .build/debug/ModelDeck --check-menu
 .build/debug/ModelDeck --check-fit Qwen/Qwen2.5-3B-Instruct-GGUF
+.build/debug/ModelDeck --check-search Qwen2.5-3B --gguf
 ```
 
-Tests cover API formats, unavailable versus zero values, multi-bucket quotas, sanitized quota persistence, HF cache symlinks/revisions, Unsloth settings read-only behavior, endpoint restrictions, reversible Claude status line installation, CPU delta units and process termination identity checks. Calculator tests cover KV scaling/precision, budgets, unsupported architectures, incomplete shard sets and bounded GGUF parsing. Menu bar tests cover selection, quota windows, remaining percentages, stale/expired values and missing samples. Tests use fixtures without external services. The process termination test creates and stops only its own disposable child process. `--check-menu` exercises native panel opening/closing, template icon configuration, dashboard reopening, image-plus-text mode, live value changes and icon-only mode. `--check-fit` is an optional live public-metadata check.
+Tests cover API formats, unavailable versus zero values, multi-bucket quotas, sanitized quota persistence, HF cache symlinks/revisions, Unsloth settings read-only behavior, endpoint restrictions, reversible Claude status line installation, CPU delta units and process termination identity checks. Calculator tests cover KV scaling/precision, budgets, unsupported architectures, incomplete shard sets and bounded GGUF parsing. Search tests cover request encoding, fixed-host restrictions, result validation and limits. Menu bar tests cover selection, quota windows, remaining percentages, stale/expired values, missing samples and exhausted weekly quotas. Tests use fixtures without external services. The process termination test creates and stops only its own disposable child process. `--check-menu` exercises native panel opening/closing, template icon configuration, dashboard reopening, image-plus-text mode, live value changes, icon-only mode and title persistence while the panel opens/closes. `--check-fit` and `--check-search` are optional live public-metadata checks.
 
 ## Credits
 

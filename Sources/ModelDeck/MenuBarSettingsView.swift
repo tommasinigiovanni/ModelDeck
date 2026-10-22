@@ -37,7 +37,7 @@ struct MenuBarSettingsView: View {
                 }.font(.system(size: 11, weight: .medium)).padding(12)
                     .background(DeckTheme.subtle.opacity(0.04), in: RoundedRectangle(cornerRadius: 9)).help(summary.tooltip)
                     .accessibilityLabel("Anteprima barra dei menu. " + summary.tooltip)
-                Text("CL = Claude Code · OA = OpenAI / Codex · h = ore · g = giorni. Quote \(options.quotaStyle == .used ? "utilizzate" : "rimanenti"). * = ultimo dato da aggiornare; — = non disponibile. Le modifiche sono immediate.")
+                Text("Automatica mostra il limite più restrittivo disponibile. h = ore · g = giorni. * = ultimo dato da aggiornare; — = non disponibile. Il clic sull’icona apre il pannello; i valori restano nella barra.")
                     .font(.system(size: 10)).foregroundStyle(DeckTheme.muted).fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -60,7 +60,7 @@ struct MenuBarSettingsView: View {
         return HStack {
             Text(title).frame(width: 115, alignment: .leading)
             Picker(title, selection: selection) {
-                Text("Automatica" + (automatic.map { " · " + $0.title } ?? "")).tag("")
+                Text("Automatica · più restrittiva" + (automatic.map { " · " + $0.title } ?? "")).tag("")
                 ForEach(usage.windows) { window in Text(window.title).tag(window.id) }
                 if !selection.wrappedValue.isEmpty, !usage.windows.contains(where: { $0.id == selection.wrappedValue }) {
                     Text("Finestra salvata · in attesa di dati").tag(selection.wrappedValue)

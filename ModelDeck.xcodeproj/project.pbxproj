@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0B031342C52C474697502545 /* ClaudeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D299C6CDCEFF2C17D50DCF8 /* ClaudeBridge.swift */; };
+		0E665DB6AC58A8ED76E0B580 /* HubSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0040B4711B4069323B538BA /* HubSearchTests.swift */; };
 		17C368DBC36D9DFCCE6F6016 /* Dashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71E2D9F992FFCCFD38FB3E55 /* Dashboard.swift */; };
 		1CC42CF125FC9BBF2CD90BC0 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B7FFD07762D0570FAD69A4E /* Models.swift */; };
 		242DE1EEE92E28092D0220C9 /* SystemMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFD6FBE08E70E94F6C76AEC8 /* SystemMonitor.swift */; };
@@ -21,6 +22,7 @@
 		513C6E96CAFDCC1439F03077 /* ModelFitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A86909E5C96C4AAB25746465 /* ModelFitTests.swift */; };
 		6EBE2804806442FE8F2A3328 /* UsageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A21D90CE3804D615C40DF07 /* UsageTests.swift */; };
 		7179166FA68C46A607DA34B9 /* DeckStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8847ABA9267FF9144A793E56 /* DeckStore.swift */; };
+		80D9FDE6CFD9AF2C6ECEF32A /* HubSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC3F3EA5F49E47C30FEC875 /* HubSearchView.swift */; };
 		84B198AF11D23AAB5611ED9D /* LocalModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A1459BD6583F822422214C4 /* LocalModels.swift */; };
 		8B9AE488386EF6063F229ACF /* IntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2380DF6C0C8CA0558F8CF66 /* IntegrationTests.swift */; };
 		8ED4CEF217DA796CB655382E /* Appearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C054D8986B03664663BEE8 /* Appearance.swift */; };
@@ -29,6 +31,7 @@
 		A10B3A87991B988588702813 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B77AB449C18F0787A830D1C /* SettingsView.swift */; };
 		A1FF1DAE4269B6A12419D5A5 /* DeckApplicationDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 173CC4C5EADAF662548769F0 /* DeckApplicationDelegate.swift */; };
 		A9803DB9D233F0DE7D536B75 /* ModelDeckCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 090E5A029031F3E0F4FA3763 /* ModelDeckCore.framework */; };
+		AC31464A2C465CF229E19214 /* HubSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 365BAE1459C7902C0173C0B1 /* HubSearch.swift */; };
 		BA651E64870F8526A1CC23CC /* HuggingFaceCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D3C532BAE4A30DE03973199 /* HuggingFaceCatalog.swift */; };
 		BEB16BE585F5381C2A7493DF /* ModelDeckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDFFF41BC02F33CCCD221C7F /* ModelDeckApp.swift */; };
 		C681CFF451A12E26239FE92A /* MenuBarSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 014F75A36AA6D58E0081E138 /* MenuBarSettingsView.swift */; };
@@ -92,16 +95,19 @@
 		28394E1EBBF61A174B6B3A55 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		2B555EA917E833FBADB4B645 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
 		2C03885BB6F72805587519CF /* Subscriptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Subscriptions.swift; sourceTree = "<group>"; };
+		365BAE1459C7902C0173C0B1 /* HubSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HubSearch.swift; sourceTree = "<group>"; };
 		3A1459BD6583F822422214C4 /* LocalModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModels.swift; sourceTree = "<group>"; };
 		5B8349924829D9EA4651E0F8 /* ModelFitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelFitView.swift; sourceTree = "<group>"; };
 		6CA7C83AD642CB6A09B8EFC6 /* CreditsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreditsView.swift; sourceTree = "<group>"; };
 		71E2D9F992FFCCFD38FB3E55 /* Dashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Dashboard.swift; sourceTree = "<group>"; };
 		7A21D90CE3804D615C40DF07 /* UsageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTests.swift; sourceTree = "<group>"; };
+		7CC3F3EA5F49E47C30FEC875 /* HubSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HubSearchView.swift; sourceTree = "<group>"; };
 		8847ABA9267FF9144A793E56 /* DeckStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckStore.swift; sourceTree = "<group>"; };
 		8B77AB449C18F0787A830D1C /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		93320D85D45DF98BE034AEC5 /* ProcessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessTests.swift; sourceTree = "<group>"; };
 		A86909E5C96C4AAB25746465 /* ModelFitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelFitTests.swift; sourceTree = "<group>"; };
 		AE0980C761DA9691E806C424 /* ProcessMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessMonitor.swift; sourceTree = "<group>"; };
+		B0040B4711B4069323B538BA /* HubSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HubSearchTests.swift; sourceTree = "<group>"; };
 		BE4F54B209EC972CFC9FC3B0 /* ModelFit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelFit.swift; sourceTree = "<group>"; };
 		C94EBD7C9D2A3F54EEB2B8E0 /* MenuBarTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarTests.swift; sourceTree = "<group>"; };
 		D2380DF6C0C8CA0558F8CF66 /* IntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntegrationTests.swift; sourceTree = "<group>"; };
@@ -145,6 +151,7 @@
 		28BD5375A920BD2D3A2C0D4D /* ModelDeckCoreTests */ = {
 			isa = PBXGroup;
 			children = (
+				B0040B4711B4069323B538BA /* HubSearchTests.swift */,
 				D2380DF6C0C8CA0558F8CF66 /* IntegrationTests.swift */,
 				C94EBD7C9D2A3F54EEB2B8E0 /* MenuBarTests.swift */,
 				A86909E5C96C4AAB25746465 /* ModelFitTests.swift */,
@@ -164,6 +171,7 @@
 				71E2D9F992FFCCFD38FB3E55 /* Dashboard.swift */,
 				173CC4C5EADAF662548769F0 /* DeckApplicationDelegate.swift */,
 				8847ABA9267FF9144A793E56 /* DeckStore.swift */,
+				7CC3F3EA5F49E47C30FEC875 /* HubSearchView.swift */,
 				28394E1EBBF61A174B6B3A55 /* Info.plist */,
 				014F75A36AA6D58E0081E138 /* MenuBarSettingsView.swift */,
 				EDFFF41BC02F33CCCD221C7F /* ModelDeckApp.swift */,
@@ -179,6 +187,7 @@
 			isa = PBXGroup;
 			children = (
 				0D299C6CDCEFF2C17D50DCF8 /* ClaudeBridge.swift */,
+				365BAE1459C7902C0173C0B1 /* HubSearch.swift */,
 				0D3C532BAE4A30DE03973199 /* HuggingFaceCatalog.swift */,
 				3A1459BD6583F822422214C4 /* LocalModels.swift */,
 				FA053BF933B73B727874589A /* MenuBarSummary.swift */,
@@ -308,6 +317,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0E665DB6AC58A8ED76E0B580 /* HubSearchTests.swift in Sources */,
 				8B9AE488386EF6063F229ACF /* IntegrationTests.swift in Sources */,
 				CE56F0F18063F54C96CE63A5 /* MenuBarTests.swift in Sources */,
 				513C6E96CAFDCC1439F03077 /* ModelFitTests.swift in Sources */,
@@ -326,6 +336,7 @@
 				17C368DBC36D9DFCCE6F6016 /* Dashboard.swift in Sources */,
 				A1FF1DAE4269B6A12419D5A5 /* DeckApplicationDelegate.swift in Sources */,
 				7179166FA68C46A607DA34B9 /* DeckStore.swift in Sources */,
+				80D9FDE6CFD9AF2C6ECEF32A /* HubSearchView.swift in Sources */,
 				C681CFF451A12E26239FE92A /* MenuBarSettingsView.swift in Sources */,
 				BEB16BE585F5381C2A7493DF /* ModelDeckApp.swift in Sources */,
 				2AC7B8C8B5A57450C0A0E9F7 /* ModelFitView.swift in Sources */,
@@ -339,6 +350,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0B031342C52C474697502545 /* ClaudeBridge.swift in Sources */,
+				AC31464A2C465CF229E19214 /* HubSearch.swift in Sources */,
 				BA651E64870F8526A1CC23CC /* HuggingFaceCatalog.swift in Sources */,
 				84B198AF11D23AAB5611ED9D /* LocalModels.swift in Sources */,
 				3E88C370FD143C4905AFE9B7 /* MenuBarSummary.swift in Sources */,
@@ -442,7 +454,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.4.0;
+				MARKETING_VERSION = 0.5.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.tommasinigiovanni.ModelDeck;
 				PRODUCT_NAME = ModelDeck;
 				SDKROOT = macosx;
@@ -500,7 +512,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.4.0;
+				MARKETING_VERSION = 0.5.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.tommasinigiovanni.ModelDeck;
 				PRODUCT_NAME = ModelDeck;
 				SDKROOT = macosx;

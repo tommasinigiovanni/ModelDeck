@@ -4,6 +4,17 @@ import ModelDeckCore
 @main enum Launcher {
     @MainActor static func main() {
         let args = CommandLine.arguments
+        if let index = args.firstIndex(of: "--check-search"), args.indices.contains(index + 1) {
+            Task {
+                do {
+                    let format: HubSearchFormat = args.contains("--gguf") ? .gguf : args.contains("--mlx") ? .mlx : .all
+                    let found = try await HuggingFaceCatalog.search(args[index + 1], format: format)
+                    let data = try JSONSerialization.data(withJSONObject: ["count": found.count, "repositories": found.prefix(5).map(\.repository)] as [String: Any], options: [.prettyPrinted, .sortedKeys])
+                    print(String(decoding: data, as: UTF8.self)); exit(0)
+                } catch { fputs("\(error.localizedDescription)\n", stderr); exit(1) }
+            }
+            RunLoop.main.run(); return
+        }
         if let index = args.firstIndex(of: "--check-fit"), args.indices.contains(index + 1) {
             Task {
                 do {
@@ -55,7 +66,11 @@ import ModelDeckCore
                 var object: [String: Any] = ["chip": SystemMonitor.machine().chip, "memory_used": stats.memoryUsed, "memory_total": stats.memoryTotal, "models": inventory.models.count, "claude_windows": ClaudeUsage.read().windows.count]
                 object["cpu_percent"] = stats.cpu; object["gpu_percent"] = stats.gpu
                 object["process_count"] = processes.count; object["gpu_clients"] = processes.filter(\.gpuClient).count
-                do { let usage = try await CodexUsage.read(); object["codex_windows"] = usage.windows.map { ["window": $0.title, "used_percent": $0.usedPercent] as [String: Any] } }
+                do {
+                    let usage = try await CodexUsage.read()
+                    object["codex_windows"] = usage.windows.map { ["window": $0.title, "used_percent": $0.usedPercent] as [String: Any] }
+                    object["menu_bar_title"] = MenuBarSummary.render(options: .load(), snapshot: stats, claude: ClaudeUsage.read(), openAI: usage).title
+                }
                 catch { object["codex_error"] = error.localizedDescription }
                 if let data = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys]), let text = String(data: data, encoding: .utf8) { print(text) }
                 exit(0)
@@ -88,7 +103,7 @@ import ModelDeckCore
         let theme: DeckAppearance = CommandLine.arguments.contains("--light") ? .light : .dark
         let fit = CommandLine.arguments.contains("--fit")
         if fit { store.machine.memory = UInt64(16 * gibibyte); store.machine.metalWorkingSet = UInt64(12 * gibibyte); store.snapshot.memoryTotal = store.machine.memory; store.snapshot.memoryUsed = UInt64(8 * gibibyte) }
-        let content: AnyView = fit ? AnyView(ModelFitView(demonstration: true, appearanceOverride: theme).environmentObject(store).environment(\.locale, Locale(identifier: "it_IT"))) : AnyView(Dashboard(initialSection: section, appearanceOverride: theme).environmentObject(store).environment(\.locale, Locale(identifier: "it_IT")))
+        let content: AnyView = fit ? AnyView(ModelFitView(demonstration: true, demonstrateSearch: CommandLine.arguments.contains("--search"), appearanceOverride: theme).environmentObject(store).environment(\.locale, Locale(identifier: "it_IT"))) : AnyView(Dashboard(initialSection: section, appearanceOverride: theme).environmentObject(store).environment(\.locale, Locale(identifier: "it_IT")))
         let hosting = NSHostingView(rootView: content)
         let height = fit ? 850 : section == "processes" ? 940 : section == "settings" ? 1500 : section == "credits" ? 850 : 1360
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: fit ? 840 : 1180, height: CGFloat(height)), styleMask: [.titled, .closable], backing: .buffered, defer: false)

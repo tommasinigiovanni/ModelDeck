@@ -27,7 +27,7 @@ struct Dashboard: View {
                     HStack {
                         if store.demo { Text("ANTEPRIMA · DATI FITTIZI") }
                         Spacer()
-                        Text("ModelDeck 0.4.0")
+                        Text("ModelDeck 0.5.0")
                     }.font(.system(size: 9, design: .monospaced)).foregroundStyle(DeckTheme.muted)
                 }.padding(28).frame(maxWidth: 1200)
             }.frame(maxWidth: .infinity, maxHeight: .infinity)

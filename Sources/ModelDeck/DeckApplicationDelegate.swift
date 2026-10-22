@@ -124,14 +124,17 @@ import ModelDeckCore
         var options = MenuBarOptions(); options.metrics = Set(MenuBarMetric.allCases)
         menuOptionsOverride = options; refreshStatusItem()
         let text = statusItem?.button?.title ?? ""
-        let showsValues = text.contains("CPU 33%") && text.contains("RAM") && text.contains("CL5h 23%") && text.contains("OA5h 34%")
+        let showsValues = text.contains("CPU 33%") && text.contains("RAM") && text.contains("Claude 7g 41% usato") && text.contains("OpenAI 7g 58% usato")
         let imageAndText = statusItem?.button?.imagePosition == .imageLeading && statusItem?.length == NSStatusItem.variableLength
         store.snapshot.cpu = 41
         let updatesValues = statusItem?.button?.title.contains("CPU 41%") == true
+        let persistentTitle = statusItem?.button?.title
         togglePopover()
         let opened = popover.isShown
+        let valuesWhileOpen = statusItem?.button?.title == persistentTitle
         togglePopover()
         let closed = !popover.isShown
+        let valuesWhileClosed = statusItem?.button?.title == persistentTitle
         dashboard?.close()
         showDashboard()
         options.metrics = []; menuOptionsOverride = options; refreshStatusItem()
@@ -140,6 +143,7 @@ import ModelDeckCore
                 "button_target": statusItem?.button?.target === self,
                 "selected_values": showsValues, "image_and_text": imageAndText,
                 "live_values": updatesValues, "icon_only": iconOnly,
+                "values_while_open": valuesWhileOpen, "values_while_closed": valuesWhileClosed,
                 "popover_opened": opened, "popover_closed": closed,
                 "dashboard_reopened": dashboard?.isVisible == true]
     }
