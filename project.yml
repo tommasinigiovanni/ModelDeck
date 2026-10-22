@@ -1,0 +1,57 @@
+name: ModelDeck
+options:
+  bundleIdPrefix: io.github.tommasinigiovanni
+  deploymentTarget:
+    macOS: '14.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    CODE_SIGN_STYLE: Automatic
+    MACOSX_DEPLOYMENT_TARGET: '14.0'
+targets:
+  ModelDeckCore:
+    type: framework
+    platform: macOS
+    sources: [Sources/ModelDeckCore]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.tommasinigiovanni.ModelDeck.Core
+        GENERATE_INFOPLIST_FILE: YES
+  ModelDeck:
+    type: application
+    platform: macOS
+    sources: [Sources/ModelDeck]
+    dependencies:
+      - target: ModelDeckCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.tommasinigiovanni.ModelDeck
+        PRODUCT_NAME: ModelDeck
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+        ENABLE_APP_SANDBOX: NO
+    info:
+      path: Sources/ModelDeck/Info.plist
+      properties:
+        CFBundleDisplayName: ModelDeck
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        LSMinimumSystemVersion: '14.0'
+        NSHighResolutionCapable: true
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+  ModelDeckCoreTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources: [Tests/ModelDeckCoreTests]
+    dependencies:
+      - target: ModelDeckCore
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  ModelDeck:
+    build:
+      targets:
+        ModelDeck: all
+    test:
+      targets: [ModelDeckCoreTests]

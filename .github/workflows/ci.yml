@@ -1,0 +1,21 @@
+name: Build and test
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test parsers, privacy and configuration recovery
+        run: swift test
+      - name: Build macOS application
+        run: bash scripts/build.sh
+      - name: Package application
+        run: ditto -c -k --sequesterRsrc --keepParent build/ModelDeck.app build/ModelDeck-macOS.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ModelDeck-macOS
+          path: build/ModelDeck-macOS.zip
