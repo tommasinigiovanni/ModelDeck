@@ -39,6 +39,7 @@
 		CE56F0F18063F54C96CE63A5 /* MenuBarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C94EBD7C9D2A3F54EEB2B8E0 /* MenuBarTests.swift */; };
 		EBE0C9B096020AC8C8E3FDAE /* ModelFit.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE4F54B209EC972CFC9FC3B0 /* ModelFit.swift */; };
 		F0DD57ABBCFA526A18D385C6 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B555EA917E833FBADB4B645 /* Components.swift */; };
+		FF5585D9FED5C94842ED6569 /* MenuBarBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C8344A9F05E7D3D451CF00C /* MenuBarBadge.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -97,6 +98,7 @@
 		2C03885BB6F72805587519CF /* Subscriptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Subscriptions.swift; sourceTree = "<group>"; };
 		365BAE1459C7902C0173C0B1 /* HubSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HubSearch.swift; sourceTree = "<group>"; };
 		3A1459BD6583F822422214C4 /* LocalModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModels.swift; sourceTree = "<group>"; };
+		3C8344A9F05E7D3D451CF00C /* MenuBarBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarBadge.swift; sourceTree = "<group>"; };
 		5B8349924829D9EA4651E0F8 /* ModelFitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelFitView.swift; sourceTree = "<group>"; };
 		6CA7C83AD642CB6A09B8EFC6 /* CreditsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreditsView.swift; sourceTree = "<group>"; };
 		71E2D9F992FFCCFD38FB3E55 /* Dashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Dashboard.swift; sourceTree = "<group>"; };
@@ -173,6 +175,7 @@
 				8847ABA9267FF9144A793E56 /* DeckStore.swift */,
 				7CC3F3EA5F49E47C30FEC875 /* HubSearchView.swift */,
 				28394E1EBBF61A174B6B3A55 /* Info.plist */,
+				3C8344A9F05E7D3D451CF00C /* MenuBarBadge.swift */,
 				014F75A36AA6D58E0081E138 /* MenuBarSettingsView.swift */,
 				EDFFF41BC02F33CCCD221C7F /* ModelDeckApp.swift */,
 				5B8349924829D9EA4651E0F8 /* ModelFitView.swift */,
@@ -337,6 +340,7 @@
 				A1FF1DAE4269B6A12419D5A5 /* DeckApplicationDelegate.swift in Sources */,
 				7179166FA68C46A607DA34B9 /* DeckStore.swift in Sources */,
 				80D9FDE6CFD9AF2C6ECEF32A /* HubSearchView.swift in Sources */,
+				FF5585D9FED5C94842ED6569 /* MenuBarBadge.swift in Sources */,
 				C681CFF451A12E26239FE92A /* MenuBarSettingsView.swift in Sources */,
 				BEB16BE585F5381C2A7493DF /* ModelDeckApp.swift in Sources */,
 				2AC7B8C8B5A57450C0A0E9F7 /* ModelFitView.swift in Sources */,
@@ -454,7 +458,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.5.0;
+				MARKETING_VERSION = 0.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.tommasinigiovanni.ModelDeck;
 				PRODUCT_NAME = ModelDeck;
 				SDKROOT = macosx;
@@ -512,7 +516,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.5.0;
+				MARKETING_VERSION = 0.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.tommasinigiovanni.ModelDeck;
 				PRODUCT_NAME = ModelDeck;
 				SDKROOT = macosx;

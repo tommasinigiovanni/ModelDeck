@@ -45,8 +45,7 @@ import ModelDeckCore
     func configureStatusItem() {
         guard statusItem == nil else { return }
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        let image = NSImage(systemSymbolName: "square.stack.3d.up", accessibilityDescription: "ModelDeck")
-        image?.isTemplate = true; image?.size = NSSize(width: 17, height: 18)
+        let image = MenuBarBadge.icon()
         item.button?.image = image; item.button?.toolTip = "ModelDeck"
         item.button?.font = .monospacedDigitSystemFont(ofSize: 11, weight: .medium)
         item.button?.target = self; item.button?.action = #selector(togglePopover)
@@ -68,10 +67,17 @@ import ModelDeckCore
     private func refreshStatusItem() { updateStatusItem(snapshot: store.snapshot, claude: store.claude, openAI: store.codex) }
     private func updateStatusItem(snapshot: SystemSnapshot, claude: SubscriptionUsage, openAI: SubscriptionUsage) {
         guard let item = statusItem, let button = item.button else { return }
-        let summary = MenuBarSummary.render(options: menuOptionsOverride ?? .load(), snapshot: snapshot, claude: claude, openAI: openAI)
+        let options = menuOptionsOverride ?? .load()
+        let summary = MenuBarSummary.render(options: options, snapshot: snapshot, claude: claude, openAI: openAI)
         item.length = summary.title.isEmpty ? NSStatusItem.squareLength : NSStatusItem.variableLength
-        button.imagePosition = summary.title.isEmpty ? .imageOnly : .imageLeading
-        button.title = summary.title.isEmpty ? "" : " " + summary.title
+        if options.layout == .twoRows && !summary.readings.isEmpty {
+            button.image = MenuBarBadge.image(for: summary, height: NSStatusBar.system.thickness - 2)
+            button.imagePosition = .imageOnly; button.title = ""
+        } else {
+            button.image = MenuBarBadge.icon()
+            button.imagePosition = summary.title.isEmpty ? .imageOnly : .imageLeading
+            button.title = summary.title.isEmpty ? "" : " " + summary.title
+        }
         button.toolTip = summary.tooltip
         button.setAccessibilityLabel(summary.tooltip.replacingOccurrences(of: "\n", with: ", "))
     }
@@ -122,6 +128,7 @@ import ModelDeckCore
         let savedOverride = menuOptionsOverride
         defer { menuOptionsOverride = savedOverride; store.snapshot = savedSnapshot; refreshStatusItem() }
         var options = MenuBarOptions(); options.metrics = Set(MenuBarMetric.allCases)
+        options.layout = .detailed
         menuOptionsOverride = options; refreshStatusItem()
         let text = statusItem?.button?.title ?? ""
         let showsValues = text.contains("CPU 33%") && text.contains("RAM") && text.contains("Claude 7g 41% usato") && text.contains("OpenAI 7g 58% usato")
@@ -135,6 +142,10 @@ import ModelDeckCore
         togglePopover()
         let closed = !popover.isShown
         let valuesWhileClosed = statusItem?.button?.title == persistentTitle
+        options.metrics = [.claude, .openAI]; options.layout = .twoRows; menuOptionsOverride = options; refreshStatusItem()
+        let badge = statusItem?.button?.image
+        let twoRows = statusItem?.button?.title.isEmpty == true && badge?.accessibilityDescription?.contains("Claude 41%") == true && (badge?.size.height ?? 0) >= 20
+        let compactWidth = (badge?.size.width ?? 1000) < 150
         dashboard?.close()
         showDashboard()
         options.metrics = []; menuOptionsOverride = options; refreshStatusItem()
@@ -144,6 +155,7 @@ import ModelDeckCore
                 "selected_values": showsValues, "image_and_text": imageAndText,
                 "live_values": updatesValues, "icon_only": iconOnly,
                 "values_while_open": valuesWhileOpen, "values_while_closed": valuesWhileClosed,
+                "two_rows": twoRows, "two_rows_width": compactWidth,
                 "popover_opened": opened, "popover_closed": closed,
                 "dashboard_reopened": dashboard?.isVisible == true]
     }

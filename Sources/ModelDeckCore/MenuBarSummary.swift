@@ -17,15 +17,31 @@ public enum MenuBarQuotaStyle: String, CaseIterable, Codable, Sendable {
     public var title: String { self == .used ? "Utilizzata" : "Rimanente" }
 }
 
+public enum MenuBarLayout: String, CaseIterable, Codable, Sendable {
+    case compact, twoRows, detailed
+    public var title: String { switch self { case .compact: "Compatta"; case .twoRows: "Due righe"; case .detailed: "Dettagliata" } }
+}
+
 public struct MenuBarOptions: Codable, Equatable, Sendable {
     public static let defaultsKey = "menuBarOptions"
     public var metrics: Set<MenuBarMetric> = [.cpu, .memory]
     public var memoryStyle: MenuBarMemoryStyle = .percent
     public var quotaStyle: MenuBarQuotaStyle = .used
+    public var layout: MenuBarLayout = .twoRows
     /// Empty selects the most restrictive active quota in the provider's main bucket.
     public var claudeWindowID = ""
     public var openAIWindowID = ""
     public init() {}
+    private enum CodingKeys: String, CodingKey { case metrics, memoryStyle, quotaStyle, layout, claudeWindowID, openAIWindowID }
+    public init(from decoder: Decoder) throws {
+        let fields = try decoder.container(keyedBy: CodingKeys.self)
+        metrics = try fields.decodeIfPresent(Set<MenuBarMetric>.self, forKey: .metrics) ?? [.cpu, .memory]
+        memoryStyle = try fields.decodeIfPresent(MenuBarMemoryStyle.self, forKey: .memoryStyle) ?? .percent
+        quotaStyle = try fields.decodeIfPresent(MenuBarQuotaStyle.self, forKey: .quotaStyle) ?? .used
+        layout = try fields.decodeIfPresent(MenuBarLayout.self, forKey: .layout) ?? .twoRows
+        claudeWindowID = try fields.decodeIfPresent(String.self, forKey: .claudeWindowID) ?? ""
+        openAIWindowID = try fields.decodeIfPresent(String.self, forKey: .openAIWindowID) ?? ""
+    }
     public var encoded: String { (try? JSONEncoder().encode(self)).map { String(decoding: $0, as: UTF8.self) } ?? "" }
     public static func decode(_ raw: String?) -> MenuBarOptions {
         guard let raw, let data = raw.data(using: .utf8), let options = try? JSONDecoder().decode(Self.self, from: data) else { return Self() }
@@ -34,9 +50,15 @@ public struct MenuBarOptions: Codable, Equatable, Sendable {
     public static func load(from defaults: UserDefaults = .standard) -> MenuBarOptions { decode(defaults.string(forKey: defaultsKey)) }
 }
 
+public struct MenuBarReading: Sendable {
+    public let name: String
+    public let value: String
+}
+
 public struct MenuBarSummary: Sendable {
     public let title: String
     public let tooltip: String
+    public let readings: [MenuBarReading]
 
     public static func selectedWindow(in usage: SubscriptionUsage, id: String, provider: MenuBarMetric, now: Date = Date()) -> UsageWindow? {
         if !id.isEmpty { return usage.windows.first { $0.id == id } }
@@ -62,7 +84,7 @@ public struct MenuBarSummary: Sendable {
     }
 
     public static func render(options: MenuBarOptions, snapshot: SystemSnapshot, claude: SubscriptionUsage, openAI: SubscriptionUsage, now: Date = Date()) -> MenuBarSummary {
-        var titles: [String] = [], details = ["ModelDeck"]
+        var readings: [MenuBarReading] = [], details = ["ModelDeck"]
         func percentage(_ value: Double?) -> String {
             guard let value, value.isFinite, value >= 0 else { return "—" }
             return DeckFormat.percent(value)
@@ -71,12 +93,12 @@ public struct MenuBarSummary: Sendable {
             switch metric {
             case .cpu, .gpu:
                 let value = percentage(metric == .cpu ? snapshot.cpu : snapshot.gpu)
-                titles.append(metric.title + " " + value)
+                readings.append(.init(name: metric.title, value: value))
                 details.append(metric.title + " · " + value)
             case .memory:
                 let available = snapshot.memoryTotal > 0 && snapshot.memoryUsed > 0
                 let value = available ? options.memoryStyle == .percent ? percentage(snapshot.memoryPercent) : DeckFormat.bytes(snapshot.memoryUsed) : "—"
-                titles.append("RAM " + value)
+                readings.append(.init(name: "RAM", value: value))
                 details.append(available ? "RAM · \(DeckFormat.bytes(snapshot.memoryUsed)) / \(DeckFormat.bytes(snapshot.memoryTotal)) · \(percentage(snapshot.memoryPercent))" : "RAM · non disponibile")
             case .claude, .openAI:
                 let usage = metric == .claude ? claude : openAI
@@ -87,23 +109,24 @@ public struct MenuBarSummary: Sendable {
                 if let minutes = window?.durationMinutes, minutes > 0 {
                     scope = minutes % 1440 == 0 ? "\(minutes / 1440)g" : minutes % 60 == 0 ? "\(minutes / 60)h" : "\(minutes)m"
                 }
-                let label = prefix + (scope.isEmpty ? "" : " " + scope)
+                let label = prefix + (options.layout == .detailed && !scope.isEmpty ? " " + scope : "")
                 guard let window, window.usedPercent.isFinite, window.usedPercent >= 0,
                       window.resetsAt.map({ $0 > now }) ?? true else {
-                    titles.append(label + " —")
+                    readings.append(.init(name: label, value: "—"))
                     details.append(metric.title + " · " + (window?.title ?? "quota selezionata") + " · non disponibile o in attesa di aggiornamento")
                     continue
                 }
                 let stale = usage.updatedAt.map { now.timeIntervalSince($0) > 600 } ?? true
                 let needsUpdate = stale || usage.message != nil
                 let value = options.quotaStyle == .used ? window.usedPercent : max(0, 100 - window.usedPercent)
-                titles.append(label + " " + percentage(value) + (needsUpdate ? "*" : "") + (options.quotaStyle == .used ? " usato" : " rimanente"))
+                let meaning = options.layout == .detailed ? (options.quotaStyle == .used ? " usato" : " rimanente") : ""
+                readings.append(.init(name: label, value: percentage(value) + (needsUpdate ? "*" : "") + meaning))
                 var detail = metric.title + " · " + window.title + " · " + percentage(value) + (options.quotaStyle == .used ? " utilizzato" : " rimanente")
                 if needsUpdate { detail += " · ultimo dato, da aggiornare" }
                 if let reset = window.resetsAt { detail += " · reset " + reset.formatted(date: .abbreviated, time: .shortened) }
                 details.append(detail)
             }
         }
-        return MenuBarSummary(title: titles.joined(separator: "   "), tooltip: details.joined(separator: "\n"))
+        return MenuBarSummary(title: readings.map { $0.name + " " + $0.value }.joined(separator: options.layout == .detailed ? "   " : " · "), tooltip: details.joined(separator: "\n"), readings: readings)
     }
 }

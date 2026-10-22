@@ -17,6 +17,12 @@ struct MenuBarSettingsView: View {
                     ForEach(MenuBarMetric.allCases, id: \.self) { metric in Toggle(metric.title, isOn: metricBinding(metric)).toggleStyle(.checkbox) }
                 }.font(.system(size: 11))
                 HStack {
+                    Text("Disposizione").frame(width: 115, alignment: .leading)
+                    Picker("Disposizione", selection: optionBinding(\.layout)) {
+                        ForEach(MenuBarLayout.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }.pickerStyle(.segmented).labelsHidden().frame(width: 300)
+                }.font(.system(size: 11))
+                HStack {
                     Text("Valore RAM").frame(width: 115, alignment: .leading)
                     Picker("Valore RAM", selection: optionBinding(\.memoryStyle)) {
                         ForEach(MenuBarMemoryStyle.allCases, id: \.self) { Text($0.title).tag($0) }
@@ -31,13 +37,19 @@ struct MenuBarSettingsView: View {
                 windowPicker("Finestra Claude", metric: .claude, usage: store.claude, selection: optionBinding(\.claudeWindowID))
                 windowPicker("Finestra OpenAI", metric: .openAI, usage: store.codex, selection: optionBinding(\.openAIWindowID))
                 HStack(spacing: 9) {
-                    Image(systemName: "square.stack.3d.up")
-                    if !summary.title.isEmpty { Text(summary.title).monospacedDigit() }
+                    if options.layout == .twoRows && !summary.readings.isEmpty {
+                        Image(nsImage: MenuBarBadge.image(for: summary)).renderingMode(.template).fixedSize()
+                    } else {
+                        Image(systemName: "square.stack.3d.up")
+                        if !summary.title.isEmpty { Text(summary.title).monospacedDigit() }
+                    }
                     Spacer(minLength: 0)
                 }.font(.system(size: 11, weight: .medium)).padding(12)
                     .background(DeckTheme.subtle.opacity(0.04), in: RoundedRectangle(cornerRadius: 9)).help(summary.tooltip)
                     .accessibilityLabel("Anteprima barra dei menu. " + summary.tooltip)
                 Text("Automatica mostra il limite più restrittivo disponibile. h = ore · g = giorni. * = ultimo dato da aggiornare; — = non disponibile. Il clic sull’icona apre il pannello; i valori restano nella barra.")
+                    .font(.system(size: 10)).foregroundStyle(DeckTheme.muted).fixedSize(horizontal: false, vertical: true)
+                Text("Quote \(options.quotaStyle == .used ? "utilizzate" : "rimanenti"). Nelle viste compatta e su due righe, finestra e dettagli compaiono passando il puntatore sull’icona.")
                     .font(.system(size: 10)).foregroundStyle(DeckTheme.muted).fixedSize(horizontal: false, vertical: true)
             }
         }

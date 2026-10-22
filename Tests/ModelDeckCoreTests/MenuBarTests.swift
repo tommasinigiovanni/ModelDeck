@@ -10,7 +10,8 @@ final class MenuBarTests: XCTestCase {
         ], updatedAt: now, source: "Fixture")
     }
     private func render(_ options: MenuBarOptions, claude: SubscriptionUsage? = nil, codex: SubscriptionUsage? = nil, snapshot: SystemSnapshot = .init()) -> MenuBarSummary {
-        .render(options: options, snapshot: snapshot, claude: claude ?? usage(), openAI: codex ?? .init(provider: "OpenAI", source: "Fixture"), now: now)
+        var detailed = options; detailed.layout = .detailed
+        return .render(options: detailed, snapshot: snapshot, claude: claude ?? usage(), openAI: codex ?? .init(provider: "OpenAI", source: "Fixture"), now: now)
     }
     func testZeroQuotaIsValidAndMissingOrExpiredWindowsNeverBecomeZero() {
         var options = MenuBarOptions(); options.metrics = [.claude, .openAI]
@@ -73,5 +74,16 @@ final class MenuBarTests: XCTestCase {
         XCTAssertEqual(render(options, claude: claude, codex: codex).title, "Claude 7g —   OpenAI 7g 100% rimanente")
         claude.windows[0].usedPercent = 100
         XCTAssertEqual(render(options, claude: claude, codex: codex).title, "Claude 5h 0% rimanente   OpenAI 7g 100% rimanente")
+    }
+    func testLayoutMigrationPreservesProviderSelectionsAndRemainingQuotaMeaning() {
+        let saved = #"{"quotaStyle":"remaining","openAIWindowID":"","metrics":["claude","openAI"],"memoryStyle":"percent","claudeWindowID":""}"#
+        let options = MenuBarOptions.decode(saved)
+        XCTAssertEqual(options.metrics, [.claude, .openAI]); XCTAssertEqual(options.quotaStyle, .remaining)
+        XCTAssertEqual(options.layout, .twoRows)
+        let summary = MenuBarSummary.render(options: options, snapshot: .init(), claude: usage(), openAI: .init(provider: "OpenAI", source: "Fixture"), now: now)
+        XCTAssertEqual(summary.title, "Claude 26% · OpenAI —")
+        XCTAssertEqual(summary.readings.map(\.name), ["Claude", "OpenAI"])
+        XCTAssertTrue(summary.tooltip.contains("7 giorni")); XCTAssertTrue(summary.tooltip.contains("26% rimanente"))
+        XCTAssertEqual(MenuBarOptions.decode(options.encoded), options)
     }
 }

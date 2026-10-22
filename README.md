@@ -21,6 +21,7 @@ The screenshot uses **synthetic demonstration data**, not a real account or a pe
 - Confirmed termination (SIGTERM) or forced termination (SIGKILL) for your own processes, with PID identity validation.
 - Native menu bar icon: left click for the panel, right click for actions, and dashboard reopening after closing its window.
 - Selectable menu bar values beside the icon: CPU, RAM, GPU and Claude/OpenAI quota windows, with used or remaining percentages.
+- Compact, two-row and detailed menu bar layouts, with vector-rendered text that adapts to menu bar contrast.
 - Hardware fit estimator with public Hugging Face metadata, local GGUF/config metadata, configurable context, KV cache precision and memory margins.
 - Public Hugging Face model search by partial name, with selectable results and GGUF/MLX filters.
 - Credits page linking the author, source repository, issue tracker and license.
@@ -32,9 +33,9 @@ The project name and icon are provisional while the feature set is being develop
 
 ## Menu bar values
 
-Open **Impostazioni → Barra dei menu** to select any combination of CPU, RAM, GPU, Claude Code and OpenAI/Codex. CPU and RAM are enabled by default. Disable every value to keep only the icon. Preferences are saved and applied without restarting; the icon retains its left/right-click actions.
+Open **Impostazioni → Barra dei menu** to select any combination of CPU, RAM, GPU, Claude Code and OpenAI/Codex. CPU and RAM are enabled by default. Disable every value to keep only the icon. Preferences are saved and applied without restarting; the icon retains its left/right-click actions. **Disposizione** offers compact, two-row and detailed layouts. Two rows is the new default, including when migrating existing preferences; selected metrics, quota meaning and window choices are preserved.
 
-RAM can show percentage or used memory. Each provider has its own quota-window selector, including any additional Codex buckets reported by the service. Choose used or remaining percentages for both providers. Full provider names and percentage meaning appear directly in the bar, for example `Claude 7g 0% rimanente` and `OpenAI 7g 100% rimanente`. The tooltip names the window and reset time.
+RAM can show percentage or used memory. Each provider has its own quota-window selector, including any additional Codex buckets reported by the service. Choose used or remaining percentages for both providers. Compact mode shows `Claude 0% · OpenAI 99%`; two-row mode stacks pairs of readings with aligned names and percentages. The vector-backed template image uses 9–9.5 pt text with semibold values, rendered at the display's scale. Detailed mode includes window and meaning directly, for example `Claude 7g 0% rimanente`. All modes retain full window, meaning, reset and freshness information in the tooltip and accessibility label. [Layout comparison with synthetic data](docs/menu-bar-layouts.png).
 
 Unavailable/expired values display `—`, never a guessed zero. An asterisk marks last-known quotas older than ten minutes or a failed refresh. An explicitly selected window that disappears stays unavailable rather than switching silently to another quota. Automatic selection uses the **most restrictive active reported quota**, comparing Claude's returned limits and Codex's main bucket windows. Separate Codex buckets such as review limits remain selectable explicitly. An exhausted weekly limit therefore shows 0% remaining even if the five-hour window is unused. If a main window has expired, the effective quota stays unavailable until refreshed, unless another valid window already proves that usage is blocked. The values share the dashboard's refresh intervals and do not trigger additional service requests. Clicking the icon opens/closes the panel; it does not hide the selected bar values.
 
@@ -153,6 +154,7 @@ swift run ModelDeck --demo
 .build/debug/ModelDeck --preview docs/model-fit.png --fit
 .build/debug/ModelDeck --preview docs/credits.png --credits
 .build/debug/ModelDeck --preview docs/model-search.png --fit --search
+.build/debug/ModelDeck --preview docs/menu-bar-layouts.png --menu-bar
 .build/debug/ModelDeck --check-menu
 .build/debug/ModelDeck --check-fit Qwen/Qwen2.5-3B-Instruct-GGUF
 .build/debug/ModelDeck --check-search Qwen2.5-3B --gguf

@@ -102,11 +102,18 @@ import ModelDeckCore
         let section = CommandLine.arguments.contains("--credits") ? "credits" : CommandLine.arguments.contains("--processes") ? "processes" : CommandLine.arguments.contains("--settings") ? "settings" : "overview"
         let theme: DeckAppearance = CommandLine.arguments.contains("--light") ? .light : .dark
         let fit = CommandLine.arguments.contains("--fit")
+        if CommandLine.arguments.contains("--menu-bar") {
+            let hosting = NSHostingView(rootView: MenuBarLayoutsPreview().environmentObject(store))
+            writePreview(hosting, to: url, width: 650, height: 490); return
+        }
         if fit { store.machine.memory = UInt64(16 * gibibyte); store.machine.metalWorkingSet = UInt64(12 * gibibyte); store.snapshot.memoryTotal = store.machine.memory; store.snapshot.memoryUsed = UInt64(8 * gibibyte) }
         let content: AnyView = fit ? AnyView(ModelFitView(demonstration: true, demonstrateSearch: CommandLine.arguments.contains("--search"), appearanceOverride: theme).environmentObject(store).environment(\.locale, Locale(identifier: "it_IT"))) : AnyView(Dashboard(initialSection: section, appearanceOverride: theme).environmentObject(store).environment(\.locale, Locale(identifier: "it_IT")))
         let hosting = NSHostingView(rootView: content)
         let height = fit ? 850 : section == "processes" ? 940 : section == "settings" ? 1500 : section == "credits" ? 850 : 1360
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: fit ? 840 : 1180, height: CGFloat(height)), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        writePreview(hosting, to: url, width: fit ? 840 : 1180, height: CGFloat(height))
+    }
+    @MainActor private static func writePreview<Content: View>(_ hosting: NSHostingView<Content>, to url: URL, width: CGFloat, height: CGFloat) {
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: width, height: height), styleMask: [.titled, .closable], backing: .buffered, defer: false)
         window.contentView = hosting; window.orderFront(nil)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             hosting.layoutSubtreeIfNeeded()
