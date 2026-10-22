@@ -73,6 +73,7 @@ import Security
     func useDemo() {
         demo = true
         machine.chip = "Apple M4 Pro"; machine.memory = 48_000_000_000; machine.cores = 12
+        machine.unifiedMemory = true; machine.metalWorkingSet = 36_000_000_000
         snapshot.cpu = 33; snapshot.gpu = 72; snapshot.memoryTotal = machine.memory
         snapshot.memoryUsed = 36_800_000_000; snapshot.swapUsed = 6_500_000_000
         snapshot.diskTotal = 2_000_000_000_000; snapshot.diskAvailable = 1_021_000_000_000

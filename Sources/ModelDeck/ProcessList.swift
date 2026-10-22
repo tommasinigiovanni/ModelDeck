@@ -13,8 +13,8 @@ struct ProcessList: View {
     private var rows: [RunningProcess] {
         store.processes.filter { (!onlyMine || $0.isMine) && (sort != .gpu || $0.gpuClient) && (query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) || String($0.pid).contains(query)) }
             .sorted {
-                let a = sort == .cpu ? $0.cpu ?? -1 : sort == .memory ? $0.memory.map(Double.init) ?? -1 : $0.gpu ?? -1
-                let b = sort == .cpu ? $1.cpu ?? -1 : sort == .memory ? $1.memory.map(Double.init) ?? -1 : $1.gpu ?? -1
+                let a = sort == .cpu ? $0.cpu ?? -1 : sort == .memory ? $0.memory.map { Double($0) } ?? -1 : $0.gpu ?? -1
+                let b = sort == .cpu ? $1.cpu ?? -1 : sort == .memory ? $1.memory.map { Double($0) } ?? -1 : $1.gpu ?? -1
                 return a == b ? $0.pid < $1.pid : a > b
             }
     }

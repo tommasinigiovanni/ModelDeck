@@ -66,7 +66,7 @@ public enum CodexUsage {
                 guard buffer.count < 2_000_000 else { throw DeckError.invalidResponse }
             }
         }
-        try send(["id": 0, "method": "initialize", "params": ["clientInfo": ["name": "modeldeck", "title": "ModelDeck", "version": "0.2.0"]]])
+        try send(["id": 0, "method": "initialize", "params": ["clientInfo": ["name": "modeldeck", "title": "ModelDeck", "version": "0.3.0"]]])
         _ = try response(0)
         try send(["method": "initialized", "params": [:]])
         try send(["id": 1, "method": "account/rateLimits/read", "params": [:]])

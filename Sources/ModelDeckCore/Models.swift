@@ -7,6 +7,8 @@ public struct MachineInfo: Sendable {
     public var efficiencyCores = 0
     public var memory = ProcessInfo.processInfo.physicalMemory
     public var os = ProcessInfo.processInfo.operatingSystemVersionString
+    public var unifiedMemory = false
+    public var metalWorkingSet: UInt64?
     public init() {}
 }
 

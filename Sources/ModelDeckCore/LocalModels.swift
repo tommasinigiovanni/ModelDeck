@@ -40,6 +40,18 @@ public enum LocalHTTP {
         guard response.statusCode == 200 else { throw DeckError.http(response.statusCode) }
         return data
     }
+    static func modelDetails(_ base: URL, name: String) async throws -> Data {
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 3; config.timeoutIntervalForResource = 4; config.connectionProxyDictionary = [:]
+        let session = URLSession(configuration: config, delegate: NoRedirect(), delegateQueue: nil)
+        defer { session.invalidateAndCancel() }
+        var request = URLRequest(url: base.appendingPathComponent("api/show")); request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["model": name, "verbose": false])
+        let (data, response) = try await session.data(for: request)
+        guard (response as? HTTPURLResponse)?.statusCode == 200, data.count <= 2_097_152 else { throw DeckError.invalidResponse }
+        return data
+    }
 }
 
 public actor ModelInventory {
@@ -171,7 +183,9 @@ public actor ModelInventory {
     public static func scanFolder(_ folder: URL, source: ModelSource) -> [LocalModel] {
         let fm = FileManager.default
         guard let enumerator = fm.enumerator(at: folder, includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey], options: [.skipsHiddenFiles, .skipsPackageDescendants]) else { return [] }
-        var models: [LocalModel] = [], mlx: [URL: UInt64] = [:]
+        var models: [LocalModel] = [], tensors: [URL: [(String, UInt64)]] = [:]
+        var shards: [String: [(index: Int, count: Int, bytes: UInt64, path: URL)]] = [:]
+        let splitPattern = try! NSRegularExpression(pattern: "^(.*)-([0-9]{5})-of-([0-9]{5})\\.gguf$", options: .caseInsensitive)
         var count = 0
         for case let file as URL in enumerator {
             count += 1
@@ -179,17 +193,46 @@ public actor ModelInventory {
             let target = file.resolvingSymlinksInPath()
             guard let values = try? target.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey]), values.isRegularFile == true else { continue }
             let bytes = UInt64(max(0, values.fileSize ?? 0))
-            if file.pathExtension.lowercased() == "gguf", bytes > 0, !file.lastPathComponent.lowercased().hasPrefix("mmproj") {
-                models.append(LocalModel(id: file.path, name: file.deletingPathExtension().lastPathComponent, source: source, bytes: bytes, path: file))
-            } else if file.pathExtension == "safetensors" {
-                mlx[file.deletingLastPathComponent(), default: 0] += bytes
+            let name = file.lastPathComponent, lower = name.lowercased()
+            if file.pathExtension.lowercased() == "gguf", bytes > 0, !lower.contains("mmproj"), !lower.hasPrefix("mtp-"), !lower.contains("-lora.") {
+                if let match = splitPattern.firstMatch(in: name, range: NSRange(name.startIndex..., in: name)),
+                   let baseRange = Range(match.range(at: 1), in: name), let indexRange = Range(match.range(at: 2), in: name), let countRange = Range(match.range(at: 3), in: name),
+                   let index = Int(name[indexRange]), let count = Int(name[countRange]) {
+                    let key = file.deletingLastPathComponent().appendingPathComponent(String(name[baseRange])).path
+                    shards[key, default: []].append((index, count, bytes, file))
+                } else {
+                    models.append(LocalModel(id: file.path, name: file.deletingPathExtension().lastPathComponent, source: source, bytes: bytes, path: file))
+                }
+            } else if file.pathExtension.lowercased() == "safetensors", !lower.hasPrefix("adapter_") {
+                tensors[file.deletingLastPathComponent(), default: []].append((name, bytes))
             }
         }
-        for (directory, bytes) in mlx {
+        for (base, parts) in shards {
+            guard let count = parts.first?.count, count > 0, count < 10_000, parts.count == count,
+                  parts.allSatisfy({ $0.count == count }), Set(parts.map(\.index)) == Set(1...count),
+                  let first = parts.first(where: { $0.index == 1 }) else { continue }
+            models.append(LocalModel(id: base, name: (base as NSString).lastPathComponent + " · \(count) parti", source: source,
+                                     bytes: sumWeightSizes(parts.map(\.bytes)), path: first.path))
+        }
+        let tensorPattern = try! NSRegularExpression(pattern: "-([0-9]{5})-of-([0-9]{5})\\.safetensors$", options: .caseInsensitive)
+        for (directory, sizes) in tensors {
             guard fm.fileExists(atPath: directory.appendingPathComponent("config.json").path) else { continue }
-            models.append(LocalModel(id: directory.path, name: directory.lastPathComponent, source: source, bytes: bytes, format: "Safetensors", path: directory))
+            let indexed: [(Int, Int)] = sizes.compactMap { name, _ in
+                guard let match = tensorPattern.firstMatch(in: name, range: NSRange(name.startIndex..., in: name)),
+                      let a = Range(match.range(at: 1), in: name), let b = Range(match.range(at: 2), in: name),
+                      let index = Int(name[a]), let count = Int(name[b]) else { return nil }
+                return (index, count)
+            }
+            if let count = indexed.first?.1 {
+                guard count > 0, count < 10_000, indexed.count == count, indexed.allSatisfy({ $0.1 == count }), Set(indexed.map(\.0)) == Set(1...count) else { continue }
+            }
+            models.append(LocalModel(id: directory.path, name: directory.lastPathComponent, source: source, bytes: sumWeightSizes(sizes.map(\.1)), format: "Safetensors", path: directory))
         }
         return models
+    }
+
+    private static func sumWeightSizes(_ sizes: [UInt64]) -> UInt64 {
+        sizes.reduce(0) { total, size in let (sum, overflow) = total.addingReportingOverflow(size); return overflow ? UInt64.max : sum }
     }
 
     public static func scanHuggingFace(_ root: URL) -> [LocalModel] {

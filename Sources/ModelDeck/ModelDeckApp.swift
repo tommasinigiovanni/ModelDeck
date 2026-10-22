@@ -4,6 +4,19 @@ import ModelDeckCore
 @main enum Launcher {
     @MainActor static func main() {
         let args = CommandLine.arguments
+        if let index = args.firstIndex(of: "--check-fit"), args.indices.contains(index + 1) {
+            Task {
+                do {
+                    let model = try await HuggingFaceCatalog.fetch(args[index + 1])
+                    let machine = SystemMonitor.machine()
+                    let variant = model.variants.first { $0.name.lowercased().contains("q4_k_m") } ?? model.variants.first
+                    let estimate = MemoryEstimator.estimate(weights: Double(variant?.bytes ?? 0), profile: model.profile, context: 4096, physicalMemory: Double(machine.memory), metalLimit: machine.unifiedMemory ? machine.metalWorkingSet.map { Double($0) } : nil)
+                    let object: [String: Any] = ["repository": model.repository, "variants": model.variants.count, "selected": variant?.name ?? "none", "profile_complete": model.profile.complete, "layers": model.profile.layers, "kv_heads": model.profile.kvHeads, "verdict": estimate.verdict.rawValue, "budget_gib": estimate.budget / gibibyte, "total_gib": (estimate.total ?? estimate.minimum) / gibibyte]
+                    let data = try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys]); print(String(decoding: data, as: UTF8.self)); exit(0)
+                } catch { fputs("\(error.localizedDescription)\n", stderr); exit(1) }
+            }
+            RunLoop.main.run(); return
+        }
         if args.contains("--connect-claude") || args.contains("--disconnect-claude") {
             do {
                 if args.contains("--disconnect-claude") { try ClaudeBridge.uninstall(); print("Status line precedente ripristinata.") }
@@ -71,11 +84,14 @@ import ModelDeckCore
     @MainActor private static func renderPreview(to url: URL) {
         _ = NSApplication.shared
         let store = DeckStore(); store.useDemo()
-        let section = CommandLine.arguments.contains("--processes") ? "processes" : CommandLine.arguments.contains("--settings") ? "settings" : "overview"
+        let section = CommandLine.arguments.contains("--credits") ? "credits" : CommandLine.arguments.contains("--processes") ? "processes" : CommandLine.arguments.contains("--settings") ? "settings" : "overview"
         let theme: DeckAppearance = CommandLine.arguments.contains("--light") ? .light : .dark
-        let hosting = NSHostingView(rootView: Dashboard(initialSection: section, appearanceOverride: theme).environmentObject(store).environment(\.locale, Locale(identifier: "it_IT")))
-        let height = section == "processes" ? 940 : section == "settings" ? 1500 : 1360
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1180, height: CGFloat(height)), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        let fit = CommandLine.arguments.contains("--fit")
+        if fit { store.machine.memory = UInt64(16 * gibibyte); store.machine.metalWorkingSet = UInt64(12 * gibibyte); store.snapshot.memoryTotal = store.machine.memory; store.snapshot.memoryUsed = UInt64(8 * gibibyte) }
+        let content: AnyView = fit ? AnyView(ModelFitView(demonstration: true, appearanceOverride: theme).environmentObject(store).environment(\.locale, Locale(identifier: "it_IT"))) : AnyView(Dashboard(initialSection: section, appearanceOverride: theme).environmentObject(store).environment(\.locale, Locale(identifier: "it_IT")))
+        let hosting = NSHostingView(rootView: content)
+        let height = fit ? 850 : section == "processes" ? 940 : section == "settings" ? 1500 : section == "credits" ? 850 : 1360
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: fit ? 840 : 1180, height: CGFloat(height)), styleMask: [.titled, .closable], backing: .buffered, defer: false)
         window.contentView = hosting; window.orderFront(nil)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             hosting.layoutSubtreeIfNeeded()

@@ -15,6 +15,7 @@ struct Dashboard: View {
                 VStack(alignment: .leading, spacing: 24) {
                     header
                     if section == "settings" { SettingsView().environmentObject(store) }
+                    else if section == "credits" { CreditsView() }
                     else if section == "processes" { ProcessList(sort: $processSort) }
                     else {
                         if section == "overview" { overview }
@@ -26,7 +27,7 @@ struct Dashboard: View {
                     HStack {
                         if store.demo { Text("ANTEPRIMA · DATI FITTIZI") }
                         Spacer()
-                        Text("ModelDeck 0.2.0")
+                        Text("ModelDeck 0.3.0")
                     }.font(.system(size: 9, design: .monospaced)).foregroundStyle(DeckTheme.muted)
                 }.padding(28).frame(maxWidth: 1200)
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -47,6 +48,7 @@ struct Dashboard: View {
             nav("processes", "Processi", "list.bullet.rectangle")
             nav("subscriptions", "Abbonamenti", "chart.bar.xaxis")
             nav("settings", "Impostazioni", "slider.horizontal.3")
+            nav("credits", "Crediti", "info.circle")
             Spacer()
             VStack(alignment: .leading, spacing: 10) {
                 Image(systemName: "laptopcomputer").font(.system(size: 22)).foregroundStyle(DeckTheme.muted)
@@ -68,9 +70,9 @@ struct Dashboard: View {
     private var header: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 7) {
-                Text(section == "processes" ? "Chi sta usando il tuo Mac." : section == "models" ? "La tua libreria locale." : section == "subscriptions" ? "Le tue quote, in chiaro." : section == "settings" ? "Tutto al posto giusto." : "Tutto sotto controllo.")
+                Text(section == "credits" ? "Le persone e il progetto." : section == "processes" ? "Chi sta usando il tuo Mac." : section == "models" ? "La tua libreria locale." : section == "subscriptions" ? "Le tue quote, in chiaro." : section == "settings" ? "Tutto al posto giusto." : "Tutto sotto controllo.")
                     .font(.system(size: 29, weight: .semibold)).tracking(-1)
-                Text(section == "processes" ? "CPU, memoria e processi GPU. Seleziona un processo per i dettagli." : section == "overview" ? "Il tuo Mac, i tuoi modelli e le quote AI. In un solo posto." : section == "models" ? "Modelli installati, formati e stato di caricamento." : section == "subscriptions" ? "Percentuali utilizzate e prossimi reset di Claude Code e Codex." : "Sorgenti locali e collegamenti ai tuoi strumenti.")
+                Text(section == "credits" ? "Autore, codice sorgente e riferimenti." : section == "processes" ? "CPU, memoria e processi GPU. Seleziona un processo per i dettagli." : section == "overview" ? "Il tuo Mac, i tuoi modelli e le quote AI. In un solo posto." : section == "models" ? "Modelli installati, formati e stato di caricamento." : section == "subscriptions" ? "Percentuali utilizzate e prossimi reset di Claude Code e Codex." : "Sorgenti locali e collegamenti ai tuoi strumenti.")
                     .font(.system(size: 11)).foregroundStyle(DeckTheme.muted)
                 if store.demo { StatusPill(text: "ANTEPRIMA · DATI FITTIZI", color: DeckTheme.amber) }
             }
@@ -137,12 +139,16 @@ struct ModelLibrary: View {
     var limit: Int? = nil
     @State private var filter = "Tutti"
     @State private var query = ""
+    @State private var fitRequest: FitRequest?
     var filtered: [LocalModel] {
         store.inventory.models.filter { (filter == "Tutti" || $0.source.rawValue == filter) && (query.isEmpty || $0.name.localizedCaseInsensitiveContains(query)) }
     }
     var body: some View {
         VStack(spacing: 12) {
-            SectionLabel(title: "MODELLI LOCALI", trailing: "\(store.inventory.models.count) modelli · \(DeckFormat.bytes(store.inventory.models.reduce(0) { $0 + $1.bytes })) su disco*")
+            HStack {
+                SectionLabel(title: "MODELLI LOCALI", trailing: "\(store.inventory.models.count) modelli · \(DeckFormat.bytes(store.inventory.models.reduce(0) { $0 + $1.bytes })) su disco*")
+                Button { fitRequest = FitRequest(model: nil) } label: { Label("Verifica hardware", systemImage: "gauge.with.needle") }.font(.system(size: 10)).buttonStyle(.bordered)
+            }
             DeckCard {
                 VStack(spacing: 16) {
                     HStack(spacing: 8) {
@@ -161,7 +167,7 @@ struct ModelLibrary: View {
                         VStack(spacing: 10) {
                             Image(systemName: "cube.transparent").font(.system(size: 30)).foregroundStyle(DeckTheme.muted)
                             Text(store.refreshing ? "Ricerca modelli…" : "Nessun modello trovato").font(.system(size: 14, weight: .medium))
-                            Text("Avvia Ollama o il server di LM Studio, oppure aggiungi una cartella nelle impostazioni.")
+                            Text("Avvia Ollama, LM Studio o Unsloth, oppure aggiungi una cartella nelle impostazioni.")
                                 .font(.system(size: 11)).foregroundStyle(DeckTheme.muted).multilineTextAlignment(.center)
                         }.frame(maxWidth: .infinity).padding(.vertical, 22)
                     } else {
@@ -177,6 +183,7 @@ struct ModelLibrary: View {
                                 Spacer(minLength: 8)
                                 Text(model.bytes > 0 ? DeckFormat.bytes(model.bytes) : "—").font(.system(size: 11, weight: .medium, design: .monospaced)).foregroundStyle(DeckTheme.muted)
                                 StatusPill(text: model.loaded == true ? "Caricato" : model.loaded == false ? "Su disco" : "Stato ignoto", color: model.loaded == true ? DeckTheme.mint : DeckTheme.muted).frame(width: 85, alignment: .trailing)
+                                Button { fitRequest = FitRequest(model: model) } label: { Image(systemName: "gauge.with.needle").foregroundStyle(DeckTheme.blue) }.buttonStyle(.plain).help("Valuta la memoria necessaria per questo modello")
                                 if let path = model.path {
                                     Button { NSWorkspace.shared.activateFileViewerSelecting([path]) } label: { Image(systemName: "folder").foregroundStyle(DeckTheme.muted) }.buttonStyle(.plain).help("Mostra nel Finder")
                                 }
@@ -197,6 +204,6 @@ struct ModelLibrary: View {
                         .font(.system(size: 9)).foregroundStyle(DeckTheme.muted).frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-        }
+        }.sheet(item: $fitRequest) { request in ModelFitView(localModel: request.model).environmentObject(store) }
     }
 }

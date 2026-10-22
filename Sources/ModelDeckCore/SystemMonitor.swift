@@ -2,6 +2,7 @@ import Foundation
 import Darwin
 import IOKit
 import IOKit.ps
+import Metal
 
 public actor SystemMonitor {
     private var previousCPU: [UInt64]?
@@ -17,6 +18,10 @@ public actor SystemMonitor {
         }
         info.performanceCores = integer("hw.perflevel0.physicalcpu")
         info.efficiencyCores = integer("hw.perflevel1.physicalcpu")
+        if let gpu = MTLCreateSystemDefaultDevice() {
+            info.unifiedMemory = gpu.hasUnifiedMemory
+            info.metalWorkingSet = gpu.recommendedMaxWorkingSetSize > 0 ? gpu.recommendedMaxWorkingSetSize : nil
+        }
         return info
     }
 
