@@ -11,14 +11,19 @@
 		17C368DBC36D9DFCCE6F6016 /* Dashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71E2D9F992FFCCFD38FB3E55 /* Dashboard.swift */; };
 		1CC42CF125FC9BBF2CD90BC0 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B7FFD07762D0570FAD69A4E /* Models.swift */; };
 		242DE1EEE92E28092D0220C9 /* SystemMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFD6FBE08E70E94F6C76AEC8 /* SystemMonitor.swift */; };
+		2BE23284E643440FBE9CB19F /* ProcessMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE0980C761DA9691E806C424 /* ProcessMonitor.swift */; };
 		307CDEB46B815B4E4F227DD3 /* ModelDeckCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 090E5A029031F3E0F4FA3763 /* ModelDeckCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		33A0A93EED1F68A4B49C0A41 /* ModelDeckCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 090E5A029031F3E0F4FA3763 /* ModelDeckCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		4C57323267EDDF9E97B27205 /* ModelDeckCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 090E5A029031F3E0F4FA3763 /* ModelDeckCore.framework */; };
+		4E611A55A42354AD96C3C768 /* ProcessList.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8EF94F8A97F7B8EAC7E5C9 /* ProcessList.swift */; };
 		6EBE2804806442FE8F2A3328 /* UsageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A21D90CE3804D615C40DF07 /* UsageTests.swift */; };
 		7179166FA68C46A607DA34B9 /* DeckStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8847ABA9267FF9144A793E56 /* DeckStore.swift */; };
 		84B198AF11D23AAB5611ED9D /* LocalModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A1459BD6583F822422214C4 /* LocalModels.swift */; };
 		8B9AE488386EF6063F229ACF /* IntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2380DF6C0C8CA0558F8CF66 /* IntegrationTests.swift */; };
+		8ED4CEF217DA796CB655382E /* Appearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C054D8986B03664663BEE8 /* Appearance.swift */; };
+		91B75EF1A9159E7704196676 /* ProcessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93320D85D45DF98BE034AEC5 /* ProcessTests.swift */; };
 		A10B3A87991B988588702813 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B77AB449C18F0787A830D1C /* SettingsView.swift */; };
+		A1FF1DAE4269B6A12419D5A5 /* DeckApplicationDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 173CC4C5EADAF662548769F0 /* DeckApplicationDelegate.swift */; };
 		A9803DB9D233F0DE7D536B75 /* ModelDeckCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 090E5A029031F3E0F4FA3763 /* ModelDeckCore.framework */; };
 		BEB16BE585F5381C2A7493DF /* ModelDeckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDFFF41BC02F33CCCD221C7F /* ModelDeckApp.swift */; };
 		CDD1FF1B9888CB2BB8CD164C /* Subscriptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C03885BB6F72805587519CF /* Subscriptions.swift */; };
@@ -70,8 +75,10 @@
 /* Begin PBXFileReference section */
 		090E5A029031F3E0F4FA3763 /* ModelDeckCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ModelDeckCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		0D299C6CDCEFF2C17D50DCF8 /* ClaudeBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeBridge.swift; sourceTree = "<group>"; };
+		173CC4C5EADAF662548769F0 /* DeckApplicationDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckApplicationDelegate.swift; sourceTree = "<group>"; };
 		1A940838555AA553F1F40BF9 /* ModelDeckCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ModelDeckCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1B7FFD07762D0570FAD69A4E /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		21C054D8986B03664663BEE8 /* Appearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Appearance.swift; sourceTree = "<group>"; };
 		28394E1EBBF61A174B6B3A55 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		2B555EA917E833FBADB4B645 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
 		2C03885BB6F72805587519CF /* Subscriptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Subscriptions.swift; sourceTree = "<group>"; };
@@ -80,9 +87,12 @@
 		7A21D90CE3804D615C40DF07 /* UsageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTests.swift; sourceTree = "<group>"; };
 		8847ABA9267FF9144A793E56 /* DeckStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckStore.swift; sourceTree = "<group>"; };
 		8B77AB449C18F0787A830D1C /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		93320D85D45DF98BE034AEC5 /* ProcessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessTests.swift; sourceTree = "<group>"; };
+		AE0980C761DA9691E806C424 /* ProcessMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessMonitor.swift; sourceTree = "<group>"; };
 		D2380DF6C0C8CA0558F8CF66 /* IntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntegrationTests.swift; sourceTree = "<group>"; };
 		DF4EE857AAC664BA2E3AB09E /* ModelDeck.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ModelDeck.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EDFFF41BC02F33CCCD221C7F /* ModelDeckApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelDeckApp.swift; sourceTree = "<group>"; };
+		FA8EF94F8A97F7B8EAC7E5C9 /* ProcessList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessList.swift; sourceTree = "<group>"; };
 		FFD6FBE08E70E94F6C76AEC8 /* SystemMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemMonitor.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -120,6 +130,7 @@
 			isa = PBXGroup;
 			children = (
 				D2380DF6C0C8CA0558F8CF66 /* IntegrationTests.swift */,
+				93320D85D45DF98BE034AEC5 /* ProcessTests.swift */,
 				7A21D90CE3804D615C40DF07 /* UsageTests.swift */,
 			);
 			name = ModelDeckCoreTests;
@@ -129,11 +140,14 @@
 		5F4E231E4F830FE88B35641D /* ModelDeck */ = {
 			isa = PBXGroup;
 			children = (
+				21C054D8986B03664663BEE8 /* Appearance.swift */,
 				2B555EA917E833FBADB4B645 /* Components.swift */,
 				71E2D9F992FFCCFD38FB3E55 /* Dashboard.swift */,
+				173CC4C5EADAF662548769F0 /* DeckApplicationDelegate.swift */,
 				8847ABA9267FF9144A793E56 /* DeckStore.swift */,
 				28394E1EBBF61A174B6B3A55 /* Info.plist */,
 				EDFFF41BC02F33CCCD221C7F /* ModelDeckApp.swift */,
+				FA8EF94F8A97F7B8EAC7E5C9 /* ProcessList.swift */,
 				8B77AB449C18F0787A830D1C /* SettingsView.swift */,
 			);
 			name = ModelDeck;
@@ -146,6 +160,7 @@
 				0D299C6CDCEFF2C17D50DCF8 /* ClaudeBridge.swift */,
 				3A1459BD6583F822422214C4 /* LocalModels.swift */,
 				1B7FFD07762D0570FAD69A4E /* Models.swift */,
+				AE0980C761DA9691E806C424 /* ProcessMonitor.swift */,
 				2C03885BB6F72805587519CF /* Subscriptions.swift */,
 				FFD6FBE08E70E94F6C76AEC8 /* SystemMonitor.swift */,
 			);
@@ -270,6 +285,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8B9AE488386EF6063F229ACF /* IntegrationTests.swift in Sources */,
+				91B75EF1A9159E7704196676 /* ProcessTests.swift in Sources */,
 				6EBE2804806442FE8F2A3328 /* UsageTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -278,10 +294,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8ED4CEF217DA796CB655382E /* Appearance.swift in Sources */,
 				F0DD57ABBCFA526A18D385C6 /* Components.swift in Sources */,
 				17C368DBC36D9DFCCE6F6016 /* Dashboard.swift in Sources */,
+				A1FF1DAE4269B6A12419D5A5 /* DeckApplicationDelegate.swift in Sources */,
 				7179166FA68C46A607DA34B9 /* DeckStore.swift in Sources */,
 				BEB16BE585F5381C2A7493DF /* ModelDeckApp.swift in Sources */,
+				4E611A55A42354AD96C3C768 /* ProcessList.swift in Sources */,
 				A10B3A87991B988588702813 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -293,6 +312,7 @@
 				0B031342C52C474697502545 /* ClaudeBridge.swift in Sources */,
 				84B198AF11D23AAB5611ED9D /* LocalModels.swift in Sources */,
 				1CC42CF125FC9BBF2CD90BC0 /* Models.swift in Sources */,
+				2BE23284E643440FBE9CB19F /* ProcessMonitor.swift in Sources */,
 				CDD1FF1B9888CB2BB8CD164C /* Subscriptions.swift in Sources */,
 				242DE1EEE92E28092D0220C9 /* SystemMonitor.swift in Sources */,
 			);
@@ -390,7 +410,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.tommasinigiovanni.ModelDeck;
 				PRODUCT_NAME = ModelDeck;
 				SDKROOT = macosx;
@@ -448,7 +468,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.tommasinigiovanni.ModelDeck;
 				PRODUCT_NAME = ModelDeck;
 				SDKROOT = macosx;

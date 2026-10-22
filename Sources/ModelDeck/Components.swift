@@ -3,13 +3,18 @@ import Charts
 import ModelDeckCore
 
 enum DeckTheme {
-    static let mint = Color(red: 0.40, green: 0.88, blue: 0.72)
-    static let blue = Color(red: 0.46, green: 0.68, blue: 0.99)
-    static let purple = Color(red: 0.70, green: 0.57, blue: 0.96)
-    static let amber = Color(red: 0.96, green: 0.72, blue: 0.38)
-    static let background = Color(red: 0.055, green: 0.071, blue: 0.085)
-    static let card = Color(red: 0.085, green: 0.105, blue: 0.121)
-    static let muted = Color(red: 0.55, green: 0.60, blue: 0.63)
+    static func adaptive(_ dark: NSColor, _ light: NSColor) -> Color {
+        Color(nsColor: NSColor(name: nil) { $0.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light })
+    }
+    static let mint = adaptive(.init(red: 0.40, green: 0.88, blue: 0.72, alpha: 1), .init(red: 0.08, green: 0.45, blue: 0.34, alpha: 1))
+    static let blue = adaptive(.init(red: 0.46, green: 0.68, blue: 0.99, alpha: 1), .init(red: 0.16, green: 0.36, blue: 0.74, alpha: 1))
+    static let purple = adaptive(.init(red: 0.70, green: 0.57, blue: 0.96, alpha: 1), .init(red: 0.47, green: 0.30, blue: 0.74, alpha: 1))
+    static let amber = adaptive(.init(red: 0.96, green: 0.72, blue: 0.38, alpha: 1), .init(red: 0.62, green: 0.37, blue: 0.06, alpha: 1))
+    static let background = adaptive(.init(red: 0.055, green: 0.071, blue: 0.085, alpha: 1), .init(red: 0.95, green: 0.96, blue: 0.97, alpha: 1))
+    static let card = adaptive(.init(red: 0.085, green: 0.105, blue: 0.121, alpha: 1), .white)
+    static let muted = Color(nsColor: .secondaryLabelColor)
+    static let foreground = Color(nsColor: .labelColor)
+    static let subtle = adaptive(.white, .black)
     static func usage(_ value: Double) -> Color { value >= 90 ? .red : value >= 70 ? amber : mint }
 }
 
@@ -18,7 +23,7 @@ struct DeckCard<Content: View>: View {
     var body: some View {
         content.padding(20).frame(maxWidth: .infinity, alignment: .leading)
             .background(DeckTheme.card, in: RoundedRectangle(cornerRadius: 18))
-            .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.065), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 18).stroke(DeckTheme.subtle.opacity(0.065), lineWidth: 1))
     }
 }
 
@@ -83,7 +88,7 @@ struct UsageCard: View {
                 HStack(spacing: 10) {
                     Image(systemName: usage.provider == "Claude" ? "asterisk" : "circle.hexagongrid")
                         .font(.system(size: 19, weight: .medium)).foregroundStyle(usage.provider == "Claude" ? DeckTheme.amber : DeckTheme.mint)
-                        .frame(width: 34, height: 34).background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 10))
+                        .frame(width: 34, height: 34).background(DeckTheme.subtle.opacity(0.04), in: RoundedRectangle(cornerRadius: 10))
                     VStack(alignment: .leading, spacing: 3) {
                         Text(usage.provider).font(.system(size: 15, weight: .semibold))
                         Text(usage.provider == "Claude" ? "Claude Code" : "Codex" + (usage.plan.map { " · " + $0.capitalized } ?? ""))
@@ -101,10 +106,10 @@ struct UsageCard: View {
                                 Text(window.title).font(.system(size: 11)).foregroundStyle(DeckTheme.muted)
                                 Spacer()
                                 Text(window.isExpired ? "Da aggiornare" : "\(DeckFormat.percent(window.usedPercent)) usato")
-                                    .font(.system(size: 12, weight: .semibold, design: .monospaced)).foregroundStyle(window.isExpired ? DeckTheme.muted : .white)
+                                    .font(.system(size: 12, weight: .semibold, design: .monospaced)).foregroundStyle(window.isExpired ? DeckTheme.muted : DeckTheme.foreground)
                             }
                             GeometryReader { geo in
-                                Capsule().fill(.white.opacity(0.07))
+                                Capsule().fill(DeckTheme.subtle.opacity(0.07))
                                 Capsule().fill(window.isExpired ? DeckTheme.muted : DeckTheme.usage(window.usedPercent)).frame(width: geo.size.width * min(100, max(0, window.usedPercent)) / 100)
                             }.frame(height: 5)
                             if let reset = window.resetsAt {

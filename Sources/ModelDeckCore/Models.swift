@@ -32,7 +32,7 @@ public struct SystemSnapshot: Sendable {
 }
 
 public enum ModelSource: String, CaseIterable, Codable, Sendable {
-    case ollama = "Ollama", lmStudio = "LM Studio", folder = "Cartella"
+    case ollama = "Ollama", lmStudio = "LM Studio", unsloth = "Unsloth", folder = "Cartella"
 }
 
 public struct LocalModel: Identifiable, Sendable {

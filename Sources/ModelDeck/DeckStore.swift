@@ -16,8 +16,10 @@ import Security
     @Published var lastInventory: Date?
     @Published var settingsMessage: String?
     @Published var demo = false
+    @Published var processes: [RunningProcess] = []
     private let monitor = SystemMonitor()
     private let scanner = ModelInventory()
+    private let processMonitor = ProcessMonitor()
     private var started = false
 
     func start() {
@@ -49,7 +51,9 @@ import Security
         let defaults = UserDefaults.standard
         inventory = await scanner.scan(ollamaURL: defaults.string(forKey: "ollamaURL") ?? "http://127.0.0.1:11434",
                                        lmStudioURL: defaults.string(forKey: "lmStudioURL") ?? "http://127.0.0.1:1234",
-                                       lmToken: DeckKeychain.read(), folders: defaults.stringArray(forKey: "modelFolders") ?? [])
+                                       lmToken: DeckKeychain.read(), folders: defaults.stringArray(forKey: "modelFolders") ?? [],
+                                       unslothURL: defaults.string(forKey: "unslothURL") ?? "http://127.0.0.1:8888",
+                                       unslothToken: DeckKeychain.read(account: "unsloth"), unslothFolders: defaults.stringArray(forKey: "unslothFolders") ?? [])
         lastInventory = Date()
     }
     func refreshUsage() async {
@@ -61,6 +65,10 @@ import Security
             codex.message = error.localizedDescription
         }
         claude = ClaudeUsage.read()
+    }
+    func refreshProcesses() async {
+        guard !demo else { return }
+        processes = await processMonitor.sample()
     }
     func useDemo() {
         demo = true
@@ -80,7 +88,13 @@ import Security
             LocalModel(id: "a", name: "Qwen3.5 27B", source: .lmStudio, bytes: 21_200_000_000, quantization: "Q6_K", parameters: "27B", context: 262144, loaded: true),
             LocalModel(id: "b", name: "gpt-oss:20b", source: .ollama, bytes: 13_800_000_000, quantization: "MXFP4", parameters: "20B", loaded: false),
             LocalModel(id: "c", name: "Gemma 3 12B Instruct", source: .lmStudio, bytes: 8_100_000_000, quantization: "Q4_K_M", parameters: "12B", loaded: false),
-            LocalModel(id: "d", name: "nomic-embed-text:latest", source: .ollama, bytes: 274_000_000, parameters: "137M", loaded: false)
+            LocalModel(id: "d", name: "nomic-embed-text:latest", source: .ollama, bytes: 274_000_000, parameters: "137M", loaded: false),
+            LocalModel(id: "e", name: "unsloth / Qwen3.5 9B", source: .unsloth, bytes: 6_300_000_000, quantization: "Q4_K_M", parameters: "9B", loaded: false)
+        ]
+        processes = [
+            RunningProcess(id: .init(pid: 101, startedSeconds: 1, startedMicroseconds: 0), name: "Local Inference", path: "/Applications/Local Inference.app", userID: 501, cpu: 154, memory: 8_400_000_000, gpu: 65, gpuClient: true, threads: 24),
+            RunningProcess(id: .init(pid: 102, startedSeconds: 1, startedMicroseconds: 0), name: "Editor", path: "/Applications/Editor.app", userID: 501, cpu: 28, memory: 1_200_000_000, gpu: nil, gpuClient: true, threads: 12),
+            RunningProcess(id: .init(pid: 103, startedSeconds: 1, startedMicroseconds: 0), name: "Browser", path: "/Applications/Browser.app", userID: 501, cpu: 16, memory: 2_600_000_000, gpu: nil, gpuClient: true, threads: 18)
         ]
         inventory.runtimes = [.init(name: "Ollama", online: true, detail: "2 modelli · API locale"), .init(name: "LM Studio", online: true, detail: "2 modelli · API locale")]
         codex = .init(provider: "OpenAI", plan: "Pro", windows: [.init(id: "h", title: "5 ore", usedPercent: 34, resetsAt: Date().addingTimeInterval(9500)), .init(id: "w", title: "7 giorni", usedPercent: 58, resetsAt: Date().addingTimeInterval(240000))], updatedAt: Date(), source: "Codex · app server")
@@ -90,14 +104,14 @@ import Security
 
 enum DeckKeychain {
     static let service = "io.github.tommasinigiovanni.ModelDeck"
-    static func read() -> String? {
+    static func read(account: String = "lmstudio") -> String? {
         var value: CFTypeRef?
-        let status = SecItemCopyMatching([kSecClass: kSecClassGenericPassword, kSecAttrService: service, kSecAttrAccount: "lmstudio", kSecReturnData: true, kSecMatchLimit: kSecMatchLimitOne] as CFDictionary, &value)
+        let status = SecItemCopyMatching([kSecClass: kSecClassGenericPassword, kSecAttrService: service, kSecAttrAccount: account, kSecReturnData: true, kSecMatchLimit: kSecMatchLimitOne] as CFDictionary, &value)
         guard status == errSecSuccess, let data = value as? Data else { return nil }
         return String(data: data, encoding: .utf8)
     }
-    static func save(_ token: String) throws {
-        let query = [kSecClass: kSecClassGenericPassword, kSecAttrService: service, kSecAttrAccount: "lmstudio"] as [CFString: Any]
+    static func save(_ token: String, account: String = "lmstudio") throws {
+        let query = [kSecClass: kSecClassGenericPassword, kSecAttrService: service, kSecAttrAccount: account] as [CFString: Any]
         if token.isEmpty { SecItemDelete(query as CFDictionary); return }
         let attributes = [kSecValueData: Data(token.utf8)] as [CFString: Any]
         let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)

@@ -38,8 +38,10 @@ import ModelDeckCore
                 _ = await monitor.sample(); try? await Task.sleep(for: .seconds(1))
                 let stats = await monitor.sample()
                 let inventory = await ModelInventory().scan(ollamaURL: "http://127.0.0.1:11434", lmStudioURL: "http://127.0.0.1:1234", folders: [])
+                let processes = await ProcessMonitor().sample()
                 var object: [String: Any] = ["chip": SystemMonitor.machine().chip, "memory_used": stats.memoryUsed, "memory_total": stats.memoryTotal, "models": inventory.models.count, "claude_windows": ClaudeUsage.read().windows.count]
                 object["cpu_percent"] = stats.cpu; object["gpu_percent"] = stats.gpu
+                object["process_count"] = processes.count; object["gpu_clients"] = processes.filter(\.gpuClient).count
                 do { let usage = try await CodexUsage.read(); object["codex_windows"] = usage.windows.map { ["window": $0.title, "used_percent": $0.usedPercent] as [String: Any] } }
                 catch { object["codex_error"] = error.localizedDescription }
                 if let data = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys]), let text = String(data: data, encoding: .utf8) { print(text) }
@@ -50,14 +52,30 @@ import ModelDeckCore
         if let index = args.firstIndex(of: "--preview"), args.indices.contains(index + 1) {
             renderPreview(to: URL(fileURLWithPath: args[index + 1])); return
         }
-        ModelDeckApp.main()
+        let application = NSApplication.shared
+        application.setActivationPolicy(.regular)
+        let store = DeckStore()
+        if args.contains("--demo") || args.contains("--check-menu") { store.useDemo() }
+        let delegate = DeckApplicationDelegate(store: store)
+        application.delegate = delegate
+        if args.contains("--check-menu") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                let result = delegate.checkMenuLifecycle()
+                if let data = try? JSONSerialization.data(withJSONObject: result, options: .sortedKeys), let output = String(data: data, encoding: .utf8) { print(output) }
+                exit(result.values.allSatisfy { $0 } ? 0 : 1)
+            }
+        }
+        withExtendedLifetime(delegate) { application.run() }
     }
 
     @MainActor private static func renderPreview(to url: URL) {
         _ = NSApplication.shared
         let store = DeckStore(); store.useDemo()
-        let hosting = NSHostingView(rootView: Dashboard().environmentObject(store).environment(\.locale, Locale(identifier: "it_IT")))
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1180, height: 1240), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        let section = CommandLine.arguments.contains("--processes") ? "processes" : CommandLine.arguments.contains("--settings") ? "settings" : "overview"
+        let theme: DeckAppearance = CommandLine.arguments.contains("--light") ? .light : .dark
+        let hosting = NSHostingView(rootView: Dashboard(initialSection: section, appearanceOverride: theme).environmentObject(store).environment(\.locale, Locale(identifier: "it_IT")))
+        let height = section == "processes" ? 940 : section == "settings" ? 1500 : 1360
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1180, height: CGFloat(height)), styleMask: [.titled, .closable], backing: .buffered, defer: false)
         window.contentView = hosting; window.orderFront(nil)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             hosting.layoutSubtreeIfNeeded()
@@ -71,26 +89,11 @@ import ModelDeckCore
     }
 }
 
-struct ModelDeckApp: App {
-    @StateObject private var store: DeckStore = {
-        let store = DeckStore()
-        if CommandLine.arguments.contains("--demo") { store.useDemo() }
-        return store
-    }()
-    var body: some Scene {
-        Window("ModelDeck", id: "dashboard") {
-            Dashboard().environmentObject(store).environment(\.locale, Locale(identifier: "it_IT"))
-        }.defaultSize(width: 1180, height: 1000).windowStyle(.hiddenTitleBar)
-        MenuBarExtra { MenuPanel().environmentObject(store).environment(\.locale, Locale(identifier: "it_IT")) } label: { Image(systemName: "square.stack.3d.up") }
-            .menuBarExtraStyle(.window)
-        Settings { ScrollView { SettingsView().padding(24) }.frame(width: 650, height: 750).environmentObject(store).preferredColorScheme(.dark) }
-    }
-}
-
 struct MenuPanel: View {
     @EnvironmentObject var store: DeckStore
-    @Environment(\.openWindow) private var openWindow
-    @Environment(\.openSettings) private var openSettings
+    var openDashboard: () -> Void
+    var openProcesses: () -> Void
+    var openSettings: () -> Void
     var body: some View {
         ScrollView {
             VStack(spacing: 14) {
@@ -111,14 +114,17 @@ struct MenuPanel: View {
                     Spacer()
                     if let battery = store.snapshot.battery { Label(DeckFormat.percent(battery), systemImage: store.snapshot.charging ? "battery.100percent.bolt" : "battery.75percent").font(.system(size: 10)).foregroundStyle(DeckTheme.muted) }
                 }
-                Button("Apri cruscotto") { openWindow(id: "dashboard"); NSApp.activate(ignoringOtherApps: true) }.buttonStyle(.borderedProminent).tint(DeckTheme.mint).foregroundStyle(.black).frame(maxWidth: .infinity)
+                HStack {
+                    Button("Apri cruscotto", action: openDashboard).buttonStyle(.borderedProminent).tint(DeckTheme.mint)
+                    Button("Processi", action: openProcesses).buttonStyle(.bordered)
+                }
                 HStack {
                     Button { openSettings(); NSApp.activate(ignoringOtherApps: true) } label: { Image(systemName: "gearshape") }.help("Impostazioni")
                     Spacer()
                     Button { NSApp.terminate(nil) } label: { Image(systemName: "power") }.help("Esci da ModelDeck")
                 }.buttonStyle(.plain).foregroundStyle(DeckTheme.muted)
             }.padding(18)
-        }.frame(width: 420).frame(maxHeight: 750).background(DeckTheme.background).preferredColorScheme(.dark).onAppear { store.start() }
+        }.frame(width: 420, height: 680).background(DeckTheme.background).foregroundStyle(DeckTheme.foreground).deckAppearance().onAppear { store.start() }
     }
     private func mini(_ title: String, _ value: String, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 8) {

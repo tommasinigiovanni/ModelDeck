@@ -1,4 +1,5 @@
 import Foundation
+import SQLite3
 
 public enum DeckError: LocalizedError {
     case invalidEndpoint, http(Int), invalidResponse, missingCodex, timeout, rpc(String)
@@ -44,13 +45,14 @@ public enum LocalHTTP {
 public actor ModelInventory {
     public init() {}
 
-    public func scan(ollamaURL: String, lmStudioURL: String, lmToken: String? = nil, folders: [String]) async -> Inventory {
+    public func scan(ollamaURL: String, lmStudioURL: String, lmToken: String? = nil, folders: [String], unslothURL: String = "http://127.0.0.1:8888", unslothToken: String? = nil, unslothFolders: [String] = []) async -> Inventory {
         async let ollama = fetchOllama(ollamaURL)
         async let lm = fetchLMStudio(lmStudioURL, token: lmToken)
-        let (o, l) = await (ollama, lm)
+        async let unsloth = fetchUnsloth(unslothURL, token: unslothToken)
+        let (o, l, u) = await (ollama, lm, unsloth)
         var result = Inventory()
-        result.models = o.0 + l.0
-        result.runtimes = [o.1, l.1]
+        result.models = o.0 + l.0 + u.0
+        result.runtimes = [o.1, l.1, u.1]
         let home = FileManager.default.homeDirectoryForCurrentUser
         if !o.1.online { result.models += Self.scanOllama(root: home.appendingPathComponent(".ollama/models")) }
         if !l.1.online {
@@ -58,6 +60,20 @@ public actor ModelInventory {
                 result.models += Self.scanFolder(home.appendingPathComponent(relative), source: .lmStudio)
             }
         }
+        var unslothOffline: [LocalModel] = []
+        for relative in [".unsloth/studio/models", ".unsloth/studio/library", ".unsloth/studio/outputs", ".unsloth/studio/exports"] {
+            unslothOffline += Self.scanFolder(home.appendingPathComponent(relative), source: .unsloth)
+        }
+        unslothOffline += Self.scanHuggingFace(home.appendingPathComponent(".cache/huggingface/hub"))
+        let remembered = Self.unslothModelDirectories(database: home.appendingPathComponent(".unsloth/studio/studio.db"))
+        for folder in Array(Set(unslothFolders + remembered)) where !folder.isEmpty {
+            let root = URL(fileURLWithPath: NSString(string: folder).expandingTildeInPath)
+            unslothOffline += Self.scanHuggingFace(root)
+            unslothOffline += Self.scanHuggingFace(root.appendingPathComponent("hub"))
+            unslothOffline += Self.scanFolder(root, source: .unsloth)
+        }
+        let published = Set(u.0.map { $0.name.lowercased() })
+        result.models += unslothOffline.filter { !published.contains($0.name.lowercased()) }
         for folder in folders where !folder.isEmpty {
             result.models += Self.scanFolder(URL(fileURLWithPath: NSString(string: folder).expandingTildeInPath), source: .folder)
         }
@@ -89,6 +105,34 @@ public actor ModelInventory {
             return (models, RuntimeStatus(name: "LM Studio", online: true, detail: "\(models.count) modelli · API locale"))
         } catch {
             return ([], RuntimeStatus(name: "LM Studio", online: false, detail: error is DeckError ? error.localizedDescription : "Server spento · lettura da disco"))
+        }
+    }
+
+    private func fetchUnsloth(_ endpoint: String, token: String?) async -> ([LocalModel], RuntimeStatus) {
+        do {
+            let base = try LocalHTTP.endpoint(endpoint)
+            let data = try await LocalHTTP.get(base, "v1/models", token: token)
+            let live = try? await LocalHTTP.get(base, "api/inference/loaded-models", token: token)
+            let models = try Self.parseUnsloth(data, running: live)
+            return (models, RuntimeStatus(name: "Unsloth", online: true, detail: "\(models.count) modelli · API locale"))
+        } catch {
+            return ([], RuntimeStatus(name: "Unsloth", online: false, detail: error is DeckError ? error.localizedDescription : "Server spento · cache e cartelle locali"))
+        }
+    }
+
+    public static func parseUnsloth(_ data: Data, running: Data?) throws -> [LocalModel] {
+        guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any], let items = root["data"] as? [[String: Any]] else { throw DeckError.invalidResponse }
+        let liveRoot = running.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+        let live = liveRoot?["data"] as? [[String: Any]]
+        return items.compactMap { item in
+            guard let id = item["id"] as? String else { return nil }
+            let active = live?.contains { ($0["id"] as? String) == id && ($0["loaded"] as? Bool) != false }
+            return LocalModel(id: "unsloth:\(id)", name: id, source: .unsloth,
+                              bytes: (item["size_bytes"] as? NSNumber)?.uint64Value ?? 0,
+                              format: (item["format"] as? String ?? "—").uppercased(),
+                              quantization: item["quantization"] as? String,
+                              context: item["context_length"] as? Int,
+                              loaded: active ?? item["loaded"] as? Bool)
         }
     }
 
@@ -132,9 +176,10 @@ public actor ModelInventory {
         for case let file as URL in enumerator {
             count += 1
             if count > 50_000 { break }
-            guard let values = try? file.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey]), values.isRegularFile == true else { continue }
+            let target = file.resolvingSymlinksInPath()
+            guard let values = try? target.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey]), values.isRegularFile == true else { continue }
             let bytes = UInt64(max(0, values.fileSize ?? 0))
-            if file.pathExtension.lowercased() == "gguf", !file.lastPathComponent.lowercased().hasPrefix("mmproj") {
+            if file.pathExtension.lowercased() == "gguf", bytes > 0, !file.lastPathComponent.lowercased().hasPrefix("mmproj") {
                 models.append(LocalModel(id: file.path, name: file.deletingPathExtension().lastPathComponent, source: source, bytes: bytes, path: file))
             } else if file.pathExtension == "safetensors" {
                 mlx[file.deletingLastPathComponent(), default: 0] += bytes
@@ -145,6 +190,53 @@ public actor ModelInventory {
             models.append(LocalModel(id: directory.path, name: directory.lastPathComponent, source: source, bytes: bytes, format: "Safetensors", path: directory))
         }
         return models
+    }
+
+    public static func scanHuggingFace(_ root: URL) -> [LocalModel] {
+        let fm = FileManager.default
+        guard let repos = try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: nil, options: .skipsHiddenFiles) else { return [] }
+        var result: [LocalModel] = []
+        for repo in repos where repo.lastPathComponent.hasPrefix("models--") {
+            let name = String(repo.lastPathComponent.dropFirst(8)).replacingOccurrences(of: "--", with: "/")
+            let snapshots = repo.appendingPathComponent("snapshots")
+            let revisions = (try? fm.contentsOfDirectory(at: snapshots, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)) ?? []
+            let ref = (try? String(contentsOf: repo.appendingPathComponent("refs/main"), encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let chosen = revisions.first { $0.lastPathComponent == ref }.map { [$0] } ?? revisions
+            for revision in chosen {
+                var models = scanFolder(revision, source: .unsloth)
+                for index in models.indices {
+                    models[index].name = models[index].format == "GGUF" ? name + " / " + models[index].name : name
+                }
+                result += models
+            }
+        }
+        return result
+    }
+
+    /// Reads only three model-directory preferences. Never opens auth databases or chat tables.
+    /// Immutable read mode avoids creating sidecars in another application's storage.
+    public static func unslothModelDirectories(database: URL) -> [String] {
+        guard FileManager.default.fileExists(atPath: database.path) else { return [] }
+        let uri = "file:" + (database.path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? database.path) + "?mode=ro&immutable=1"
+        var db: OpaquePointer?
+        guard sqlite3_open_v2(uri, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_URI | SQLITE_OPEN_NOMUTEX, nil) == SQLITE_OK else {
+            if let db { sqlite3_close(db) }; return []
+        }
+        defer { sqlite3_close(db) }
+        sqlite3_busy_timeout(db, 50)
+        var statement: OpaquePointer?
+        let query = "SELECT value_json FROM app_settings WHERE key IN ('hugging_face_cache_home','hugging_face_cache_history','hugging_face_download_homes')"
+        guard sqlite3_prepare_v2(db, query, -1, &statement, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(statement) }
+        var paths: [String] = []
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard let text = sqlite3_column_text(statement, 0) else { continue }
+            let data = Data(String(cString: text).utf8)
+            guard let value = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed) else { continue }
+            if let path = value as? String { paths.append(path) }
+            if let list = value as? [String] { paths += list }
+        }
+        return Array(Set(paths.filter { $0.hasPrefix("/") || $0.hasPrefix("~/") })).sorted()
     }
 
     public static func scanOllama(root: URL) -> [LocalModel] {

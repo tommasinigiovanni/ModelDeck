@@ -1,7 +1,54 @@
 import XCTest
+import SQLite3
 @testable import ModelDeckCore
 
 final class IntegrationTests: XCTestCase {
+    func testUnslothReadsOnlyModelDirectoryPreferencesWithoutWriting() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let database = directory.appendingPathComponent("studio.db")
+        var db: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(database.path, &db), SQLITE_OK)
+        let sql = """
+        CREATE TABLE app_settings (key TEXT PRIMARY KEY, value_json TEXT);
+        INSERT INTO app_settings VALUES ('hugging_face_cache_home', '"/Volumes/Models/HF"');
+        INSERT INTO app_settings VALUES ('hugging_face_download_homes', '["/Volumes/Downloads"]');
+        INSERT INTO app_settings VALUES ('unrelated_setting', '"/private/not-models"');
+        """
+        XCTAssertEqual(sqlite3_exec(db, sql, nil, nil, nil), SQLITE_OK)
+        sqlite3_close(db)
+        let original = try Data(contentsOf: database)
+        XCTAssertEqual(ModelInventory.unslothModelDirectories(database: database), ["/Volumes/Downloads", "/Volumes/Models/HF"])
+        XCTAssertEqual(try Data(contentsOf: database), original)
+        let missing = directory.appendingPathComponent("missing.db")
+        XCTAssertEqual(ModelInventory.unslothModelDirectories(database: missing), [])
+        XCTAssertFalse(FileManager.default.fileExists(atPath: missing.path))
+    }
+    func testUnslothDoesNotAssumeListedModelsAreLoaded() throws {
+        let catalog = Data(#"{"data":[{"id":"unsloth/Qwen","loaded":false},{"id":"other","size_bytes":42}]}"#.utf8)
+        let models = try ModelInventory.parseUnsloth(catalog, running: nil)
+        XCTAssertEqual(models[0].source, .unsloth)
+        XCTAssertEqual(models[0].loaded, false); XCTAssertNil(models[1].loaded)
+        let live = Data(#"{"data":[{"id":"other","loaded":true}]}"#.utf8)
+        XCTAssertEqual(try ModelInventory.parseUnsloth(catalog, running: live)[1].loaded, true)
+    }
+    func testHuggingFaceSymlinksAndSelectedRevision() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let repo = root.appendingPathComponent("models--unsloth--Test")
+        let snapshot = repo.appendingPathComponent("snapshots/abc123")
+        let old = repo.appendingPathComponent("snapshots/old")
+        let blob = repo.appendingPathComponent("blobs/weights")
+        for directory in [snapshot, old, blob.deletingLastPathComponent(), repo.appendingPathComponent("refs")] { try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true) }
+        try Data("abc123".utf8).write(to: repo.appendingPathComponent("refs/main"))
+        try Data(repeating: 0, count: 128).write(to: blob)
+        try FileManager.default.createSymbolicLink(at: snapshot.appendingPathComponent("model.gguf"), withDestinationURL: blob)
+        try Data(repeating: 0, count: 16).write(to: old.appendingPathComponent("old.gguf"))
+        let models = ModelInventory.scanHuggingFace(root)
+        XCTAssertEqual(models.count, 1); XCTAssertEqual(models.first?.bytes, 128)
+        XCTAssertTrue(models.first?.name.contains("unsloth/Test") == true)
+    }
     func testCodexRPCReadsSmallResponsesWithoutWaitingForEOF() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }

@@ -4,14 +4,18 @@ import ModelDeckCore
 struct Dashboard: View {
     @EnvironmentObject var store: DeckStore
     @State private var section = "overview"
+    @State private var processSort = ProcessSort.cpu
+    var initialSection = "overview"
+    var appearanceOverride: DeckAppearance? = nil
     var body: some View {
         HStack(spacing: 0) {
             sidebar
-            Rectangle().fill(.white.opacity(0.07)).frame(width: 1)
+            Rectangle().fill(DeckTheme.subtle.opacity(0.07)).frame(width: 1)
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     header
                     if section == "settings" { SettingsView().environmentObject(store) }
+                    else if section == "processes" { ProcessList(sort: $processSort) }
                     else {
                         if section == "overview" { overview }
                         if section == "subscriptions" { subscriptions }
@@ -20,17 +24,16 @@ struct Dashboard: View {
                         }
                     }
                     HStack {
-                        Circle().fill(DeckTheme.mint).frame(width: 4, height: 4)
-                        Text(store.demo ? "ANTEPRIMA · DATI FITTIZI" : "I dati del Mac restano sul Mac")
+                        if store.demo { Text("ANTEPRIMA · DATI FITTIZI") }
                         Spacer()
-                        Text("ModelDeck 0.1.0")
+                        Text("ModelDeck 0.2.0")
                     }.font(.system(size: 9, design: .monospaced)).foregroundStyle(DeckTheme.muted)
                 }.padding(28).frame(maxWidth: 1200)
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
-        }.background(DeckTheme.background).foregroundStyle(.white)
+        }.background(DeckTheme.background).foregroundStyle(DeckTheme.foreground)
             .frame(minWidth: 940, minHeight: 680)
-            .preferredColorScheme(.dark)
-            .onAppear { store.start() }
+            .deckAppearance(appearanceOverride)
+            .onAppear { section = initialSection; store.start() }
     }
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -41,6 +44,7 @@ struct Dashboard: View {
             Text("IL TUO SPAZIO AI").font(.system(size: 8, weight: .medium, design: .monospaced)).tracking(2).foregroundStyle(DeckTheme.muted).padding(.bottom, 34)
             nav("overview", "Panoramica", "rectangle.grid.2x2")
             nav("models", "Modelli locali", "cube.transparent")
+            nav("processes", "Processi", "list.bullet.rectangle")
             nav("subscriptions", "Abbonamenti", "chart.bar.xaxis")
             nav("settings", "Impostazioni", "slider.horizontal.3")
             Spacer()
@@ -50,7 +54,7 @@ struct Dashboard: View {
                 Text("\(DeckFormat.bytes(store.machine.memory)) · \(store.machine.cores) core")
                     .font(.system(size: 10)).foregroundStyle(DeckTheme.muted)
                 StatusPill(text: store.snapshot.thermal)
-            }.padding(14).frame(maxWidth: .infinity, alignment: .leading).background(.white.opacity(0.03), in: RoundedRectangle(cornerRadius: 12))
+            }.padding(14).frame(maxWidth: .infinity, alignment: .leading).background(DeckTheme.subtle.opacity(0.03), in: RoundedRectangle(cornerRadius: 12))
         }.padding(20).frame(width: 190).background(.black.opacity(0.12))
     }
     private func nav(_ id: String, _ title: String, _ symbol: String) -> some View {
@@ -64,15 +68,15 @@ struct Dashboard: View {
     private var header: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 7) {
-                Text(section == "models" ? "La tua libreria locale." : section == "subscriptions" ? "Le tue quote, in chiaro." : section == "settings" ? "Tutto al posto giusto." : "Tutto sotto controllo.")
+                Text(section == "processes" ? "Chi sta usando il tuo Mac." : section == "models" ? "La tua libreria locale." : section == "subscriptions" ? "Le tue quote, in chiaro." : section == "settings" ? "Tutto al posto giusto." : "Tutto sotto controllo.")
                     .font(.system(size: 29, weight: .semibold)).tracking(-1)
-                Text(section == "overview" ? "Il tuo Mac, i tuoi modelli e le quote AI. In un solo posto." : section == "models" ? "Modelli installati, formati e stato di caricamento." : section == "subscriptions" ? "Percentuali utilizzate e prossimi reset di Claude Code e Codex." : "Sorgenti locali e collegamenti ai tuoi strumenti.")
+                Text(section == "processes" ? "CPU, memoria e processi GPU. Seleziona un processo per i dettagli." : section == "overview" ? "Il tuo Mac, i tuoi modelli e le quote AI. In un solo posto." : section == "models" ? "Modelli installati, formati e stato di caricamento." : section == "subscriptions" ? "Percentuali utilizzate e prossimi reset di Claude Code e Codex." : "Sorgenti locali e collegamenti ai tuoi strumenti.")
                     .font(.system(size: 11)).foregroundStyle(DeckTheme.muted)
                 if store.demo { StatusPill(text: "ANTEPRIMA · DATI FITTIZI", color: DeckTheme.amber) }
             }
             Spacer()
             Button { Task { await store.refreshModels(); await store.refreshUsage() } } label: {
-                Image(systemName: "arrow.clockwise").font(.system(size: 13)).frame(width: 32, height: 32).background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 9))
+                Image(systemName: "arrow.clockwise").font(.system(size: 13)).frame(width: 32, height: 32).background(DeckTheme.subtle.opacity(0.04), in: RoundedRectangle(cornerRadius: 9))
             }.buttonStyle(.plain).disabled(store.refreshing || store.usageRefreshing).help("Aggiorna modelli e quote")
         }
     }
@@ -82,8 +86,11 @@ struct Dashboard: View {
                 SectionLabel(title: "QUESTO MAC", trailing: "Aggiornamento continuo")
                 HStack(alignment: .top, spacing: 12) {
                     MetricCard(title: "CPU", symbol: "cpu", value: DeckFormat.percent(store.snapshot.cpu), detail: "\(store.machine.cores) core · \(store.machine.performanceCores)P + \(store.machine.efficiencyCores)E", color: DeckTheme.blue, history: store.cpuHistory)
+                        .onTapGesture { processSort = .cpu; section = "processes" }.help("Mostra i processi ordinati per CPU")
                     MetricCard(title: "MEMORIA", symbol: "memorychip", value: DeckFormat.bytes(store.snapshot.memoryUsed), detail: "\(DeckFormat.percent(store.snapshot.memoryPercent)) di \(DeckFormat.bytes(store.snapshot.memoryTotal)) · swap \(DeckFormat.bytes(store.snapshot.swapUsed))", color: DeckTheme.mint, history: store.memoryHistory)
+                        .onTapGesture { processSort = .memory; section = "processes" }.help("Mostra i processi ordinati per memoria")
                     MetricCard(title: "GPU", symbol: "square.3.layers.3d", value: DeckFormat.percent(store.snapshot.gpu), detail: store.snapshot.gpu == nil ? "Metrica non esposta su questo Mac" : "Utilizzo del dispositivo · IOKit", color: DeckTheme.purple, history: store.gpuHistory)
+                        .onTapGesture { processSort = .gpu; section = "processes" }.help("Mostra i processi GPU")
                 }
                 HStack(spacing: 12) {
                     DeckCard {
@@ -139,7 +146,7 @@ struct ModelLibrary: View {
             DeckCard {
                 VStack(spacing: 16) {
                     HStack(spacing: 8) {
-                        ForEach(["Tutti", "Ollama", "LM Studio", "Cartella"], id: \.self) { source in
+                        ForEach(["Tutti"] + ModelSource.allCases.map(\.rawValue), id: \.self) { source in
                             Button { filter = source } label: {
                                 Text(source).font(.system(size: 10, weight: .medium)).padding(.horizontal, 10).padding(.vertical, 7)
                                     .foregroundStyle(filter == source ? DeckTheme.mint : DeckTheme.muted)
@@ -161,7 +168,7 @@ struct ModelLibrary: View {
                         ForEach(Array(filtered.prefix(limit ?? Int.max))) { model in
                             HStack(spacing: 12) {
                                 Image(systemName: "cube.fill").font(.system(size: 16)).foregroundStyle(model.source == .ollama ? DeckTheme.mint : DeckTheme.purple)
-                                    .frame(width: 34, height: 38).background(.white.opacity(0.03), in: RoundedRectangle(cornerRadius: 9))
+                                    .frame(width: 34, height: 38).background(DeckTheme.subtle.opacity(0.03), in: RoundedRectangle(cornerRadius: 9))
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(model.name).font(.system(size: 12, weight: .medium)).lineLimit(1).help(model.name)
                                     Text(([model.source.rawValue, model.format] + [model.parameters, model.quantization, model.context.map { "ctx \($0.formatted())" }].compactMap { $0 }).joined(separator: " · "))
@@ -174,7 +181,7 @@ struct ModelLibrary: View {
                                     Button { NSWorkspace.shared.activateFileViewerSelecting([path]) } label: { Image(systemName: "folder").foregroundStyle(DeckTheme.muted) }.buttonStyle(.plain).help("Mostra nel Finder")
                                 }
                             }
-                            if model.id != Array(filtered.prefix(limit ?? Int.max)).last?.id { Divider().overlay(.white.opacity(0.02)) }
+                            if model.id != Array(filtered.prefix(limit ?? Int.max)).last?.id { Divider().overlay(DeckTheme.subtle.opacity(0.02)) }
                         }
                     }
                     Divider()
